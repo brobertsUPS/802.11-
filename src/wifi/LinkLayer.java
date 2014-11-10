@@ -1,5 +1,6 @@
 package wifi;
 import java.io.PrintWriter;
+import java.util.Arrays;
 
 import rf.RF;
 
@@ -31,7 +32,10 @@ public class LinkLayer implements Dot11Interface {
     * of bytes to send.  See docs for full description.
     */
    public int send(short dest, byte[] data, int len) {
+	  Packet packet = new Packet((short)0, dest, ourMAC, data);
       output.println("LinkLayer: Sending "+len+" bytes to "+dest);
+      System.out.println((byte)-1);
+      System.out.println(Arrays.toString(packet.toBytes()));
       theRF.transmit(data);
       return len;
    }

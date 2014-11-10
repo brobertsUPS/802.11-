@@ -7,33 +7,65 @@ package wifi;
  */
 public class Packet {
 
-	private int control;
+	private short control;
 	private short destAddr;
 	private short srcAddr;
 	private byte[] data;
-	private byte[] crc;
-	private byte[] thePacket;
 	private boolean dataWaiting;
+	private boolean retry;
+	private short seqNum;
 	
-	public Packet(int theControl, short destination, short source){
-		control = theControl;
+	/**
+	 * Compiles the packet from the various information that makes up the packet
+	 * @param frameType
+	 * @param destination
+	 * @param source
+	 */
+	public Packet(short frameType, short destination, short source, byte[] data){
+		control = frameType; //putting into control temporarily
 		destAddr = destination;
 		srcAddr = source;
+		this.data = data;
+		buildControlBytes();
+		
+	}
+	
+	/**
+	 * Creates a packet from a received packet
+	 */
+	public Packet(byte[] recveivedPacket){
+		
 	}
 	
 	/**
 	 * Takes the long passed in and returns it as a byte array
 	 * @return the byte representation of the long
 	 */
-	private byte[] toBytes(){
-		return data; 
-	}
-	
-	/**
-	 * Fills 
-	 */
-	public void fromBytes(){//What does this need to take in and what does it return?
+	public byte[] toBytes(){
+		byte[] buffer = new byte[data.length+10];
 		
+		//build control piece
+		buffer[0] = (byte) ((control >>> 8) & 0xFF);   
+		buffer[1] = (byte) (control & 0xFF);   
+		
+		//destination bytes
+		buffer[2] = (byte) ((destAddr >>> 8) & 0xFF);  
+		buffer[3] = (byte) (destAddr & 0xFF);   
+		
+		//source bytes
+		buffer[4] = (byte) ((srcAddr >>> 8) & 0xFF);   
+		buffer[5] = (byte) (srcAddr & 0xFF);   
+		
+		//data bytes
+		int bufferPos = 6;
+		for(int i=data.length-1; i >= 0; i--)
+			buffer[bufferPos++] = data[i];
+		
+		for(int i=buffer.length-1; i>buffer.length-5;i--)
+			buffer[i] = (byte)255;
+		
+		
+		return buffer; 
 	}
 	
 	/**
@@ -42,14 +74,6 @@ public class Packet {
 	 */
 	public byte[] getDatabuf(){
 		return data;
-	}
-	
-	/**
-	 * Gives the destination address back in byte form.
-	 * @return the destAddr as a byte array
-	 */
-	public short getDestAddr(){
-		return destAddr;
 	}
 	
 	/**
@@ -63,36 +87,13 @@ public class Packet {
 	/**
 	 * Turns the control instance into a byte array.
 	 */
-	public void buildControlBytes(){
-		
-	}
-	
-	/**
-	 * Turns the destAddr instance into a byte array.
-	 */
-	public void buildDestAddrBytes(){
-		
-	}
-	
-	/**
-	 * Turns the srcAddr instance into a byte array.
-	 */
-	public void buildSRCAddrBytes(){
-		
-	}
-	
-	/**
-	 * Turns the data instance into a byte array
-	 */
-	public void buildDataBytes(){
-		
-	}
-	
-	/**
-	 * Turns the last four bytes into 1s
-	 */
-	public void buildCRCBytes(){
-		
+	private void buildControlBytes(){
+		// 000 0 0000 00000000
+		control <<= 1; 
+		if(retry)
+			control++;
+		control <<= 12;
+		control += (seqNum &0x1FF);		
 	}
 	
 	/**

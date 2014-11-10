@@ -75,6 +75,14 @@ public class JavaGUIAdapter implements GUIClientInterface {
       data[1] = (byte) (t.getSourceAddr() & 0xFF);
       System.arraycopy(t.getBuf(), 0, data, 2, dataLen);
       return data;
+      /**
+       * int offset = 8;
+       * for(int ii=0; ii<data.length; ii++){
+       * 	
+       * 
+       * 
+       * }
+       */
    }
 
    /**
