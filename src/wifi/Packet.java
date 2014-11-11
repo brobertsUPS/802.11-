@@ -14,7 +14,9 @@ public class Packet {
 	private boolean dataWaiting;
 	private boolean retry;
 	private short seqNum;
+	private boolean isAcked; //defaults to false
 	
+
 	/**
 	 * Compiles the packet from the various information that makes up the packet
 	 * @param frameType
@@ -27,30 +29,27 @@ public class Packet {
 		srcAddr = source;
 		this.data = data;
 		buildControlBytes();//fills the control variable with the correct bytes
-		
 	}
 	
 	/**
 	 * Creates a packet from a received packet
 	 */
 	public Packet(byte[] recvPacket){
-		//(((short)buf[0]) & 0xFF) <<8 | buf[1]& 0xFF;
 		
 		//build control piece
-		control = (short) (((short)recvPacket[0] & 0xFF) <<8 | recvPacket[1] & 0xFF);
+		control = (short)((recvPacket[0] << 8 ) + recvPacket[1]);
 		
 		//destination bytes
-		destAddr = (short)(((short)recvPacket[2] & 0xFF) <<8 | recvPacket[3] & 0xFF);
+		destAddr = (short)((recvPacket[2] << 8) + recvPacket[3]);
 				
 		//source bytes
-		srcAddr = (short)(((short)recvPacket[4] & 0xFF) <<8 | recvPacket[5] & 0xFF);
+		srcAddr = (short)((recvPacket[4]) <<8 + recvPacket[5]);
 				
 		//data bytes (data size is total size - 10)
 		data = new byte[recvPacket.length-10];//create the data buffer with correct size
-		int endDataIndex = recvPacket.length -11;//end of the data buffer
-		for(int i=6; i < recvPacket.length-4; i++) //start taking from recvPacket at index 6 and put it at the end of the data buffer
-			data[endDataIndex--]= recvPacket[i];
-		
+		int bufferPosition = 6; 
+		for(int i=data.length-1; i >=0; i--) //start taking from recvPacket at index 6 and put it at the end of the data buffer
+			data[i]= recvPacket[bufferPosition++];
 	}
 	
 	/**
@@ -79,8 +78,7 @@ public class Packet {
 		
 		//CRC bytes filled to all ones
 		for(int i=buffer.length-1; i>buffer.length-5;i--)
-			buffer[i] = (byte)255;
-		
+			buffer[i] = (byte)-1;
 		
 		return buffer; 
 	}
@@ -102,6 +100,22 @@ public class Packet {
 	}
 	
 	/**
+	 * 
+	 * @return
+	 */
+	public boolean isAcked() {
+		return isAcked;
+	}
+
+	/**
+	 * 
+	 * @param isAcked
+	 */
+	public void setAcked(boolean isAcked) {
+		this.isAcked = isAcked;
+	}
+	
+	/**
 	 * Turns the control instance into a byte array.
 	 */
 	private void buildControlBytes(){
@@ -118,4 +132,6 @@ public class Packet {
 	public String toString(){
 		return "";
 	}
+	
+	
 }

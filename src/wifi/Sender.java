@@ -1,5 +1,7 @@
 package wifi;
 
+import java.util.ArrayDeque;
+
 import rf.RF;
 
 /**
@@ -9,17 +11,28 @@ import rf.RF;
  */
 public class Sender implements Runnable{
 
-	private RF theRF;
+	private RF rf;
 	private long sendTime;
+	private ArrayDeque<Packet> packetBuf;
 	
-	public Sender(){
-		
+	public Sender(RF theRF, ArrayDeque<Packet> packetBuffer){
+		rf = theRF;
+		packetBuf = packetBuffer;
 	}
+	
 	/**
 	 * 
 	 */
 	public void run() {
 		
+		while(rf.inUse()){
+			try{
+				wait(10);
+			}catch(InterruptedException e){
+				System.err.println("Sender interrupted!");
+			}
+		}
+		rf.transmit(packetBuf.poll().toBytes());
 		
 	}
 
