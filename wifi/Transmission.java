@@ -1,5 +1,4 @@
 package wifi;
-
 /**
  * This class contains the information available from an incoming transmission.  In C, the
  * recvfrom() call returns information about the source and destination address through

@@ -1,8 +1,8 @@
-package wifi;
-
+import wifi.*;
 /**
  * A class to represent an 802.11~ frame.
  * @author Brandon Roberts
+ * @author Nate Olderman
  *
  */
 public class Packet {

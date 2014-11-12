@@ -1,4 +1,4 @@
-package wifi;
+import wifi.*;
 import java.util.ArrayDeque;
 import java.util.concurrent.*;
 
