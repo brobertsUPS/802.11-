@@ -1,21 +1,29 @@
 import wifi.*;
+import rf.RF;
+
 import java.util.ArrayDeque;
 import java.util.concurrent.*;
 
-import rf.RF;
-
 /**
  * 
+ * Threaded Receiver that continually watches the RF layer for incoming information
  * @author Brandon Roberts
+ * @author Nate Olderman
  *
  */
 public class Receiver implements Runnable {
 
 	private RF rf;
-	private long recvTime;
+	//private long recvTime;
 	private ArrayDeque<Packet> senderBuf;
 	private ArrayBlockingQueue<Packet> receiverBuf;
 	
+	/**
+	* Makes a new Receiver object that watches the RF layer for incoming information
+	* @param theRF			the RF layer to receive from
+	* @param senderBuffer 	the queue of packets needing to be sent (use in Reciever to confirm ACK)
+	* @param receiverBuffer	the que of received packets
+	*/
 	public Receiver(RF theRF, ArrayDeque<Packet> senderBuffer, ArrayBlockingQueue<Packet> receiverBuffer){
 		rf = theRF;
 		senderBuf = senderBuffer;
@@ -26,21 +34,15 @@ public class Receiver implements Runnable {
 	 * Begins waiting for the rf layer to receive and puts it in the receiverBuf
 	 */
 	public void run() {
-		//rf.receive waits for message on channel
-		//receiverBuf.put waits for something to put on the Queue
-		try {
-			receiverBuf.put(new Packet(rf.receive()));
-		} catch (InterruptedException e) {
-			System.err.println("Receiver interrupted!");
+		while(true){
+			//rf.receive waits for message on channel
+			//receiverBuf.put waits for something to put on the Queue
+			try {
+				receiverBuf.put(new Packet(rf.receive()));
+			} catch (InterruptedException e) {
+				System.err.println("Receiver interrupted!");
+			}
 		}
-		
-//		while(true){
-//			try{
-//				wait();
-//			}catch(InterruptedException e){
-//				System.err.println("Thread was woken!");
-//			}
-//		}
 		
 	}
 

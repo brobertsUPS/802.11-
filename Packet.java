@@ -1,26 +1,29 @@
 import wifi.*;
 /**
  * A class to represent an 802.11~ frame.
- * @author Brandon Roberts
  * @author Nate Olderman
+ * @author Brandon Roberts
  *
  */
 public class Packet {
 
-	private short control;
-	private short destAddr;
-	private short srcAddr;
-	private byte[] data;
-	private boolean retry;
-	private short seqNum;
-	private boolean isAcked; //defaults to false
+	private short control;		//control field, constructor initializes it with frame type
+	private boolean retry;		//retry bit if the packet is being resent
+	private short seqNum;		//sequence number of the packet
+
+	private short destAddr;		//destination address for packet
+	private short srcAddr;		//source address for packet
+	private byte[] data;		//packet's data
+
+	private boolean isAcked;	//defaults to false
 	
 
 	/**
 	 * Compiles the packet from the various information that makes up the packet
-	 * @param frameType
-	 * @param destination
-	 * @param source
+	 * @param frameType		the type of frame to make
+	 * @param destination	the packet's destination address
+	 * @param source 		the packet's source address
+	 * @param data 			the actual data being sent
 	 */
 	public Packet(short frameType, short destination, short source, byte[] data){
 		control = frameType; //putting into control temporarily
@@ -30,6 +33,7 @@ public class Packet {
 		buildControlBytes();//fills the control variable with the correct bytes
 	}
 	
+
 	/**
 	 * Creates a Packet from a byte array
 	 * @param the byte array received from the rf layer
@@ -37,10 +41,10 @@ public class Packet {
 	public Packet(byte[] recvPacket){
 		
 		//build control piece
-		control = (short)((recvPacket[0] << 8 ) + recvPacket[1]);
+		control = (short) ((recvPacket[0] << 8 ) + recvPacket[1]);
 		
 		//destination bytes
-		destAddr = 	(short) (((recvPacket[2] & 0xFF) << 8) + (recvPacket[3] & 0xFF));
+		destAddr = (short) (((recvPacket[2] & 0xFF) << 8) + (recvPacket[3] & 0xFF));
 				
 		//source bytes
 		srcAddr = (short) (((recvPacket[4] & 0xFF) << 8) + (recvPacket[5] & 0xFF));
@@ -48,10 +52,11 @@ public class Packet {
 		//data bytes
 		data = new byte[recvPacket.length-10];//create the data buffer with correct size
 		int bufferPosition = 6; 
-		for(int i=data.length-1; i >=0; i--) //start taking from recvPacket at index 6 and put it at the end of the data buffer
-			data[i]= recvPacket[bufferPosition++];
+		for(int i = data.length-1; i >= 0; i--) //start taking from recvPacket at index 6 and put it at the end of the data buffer
+			data[i] = recvPacket[bufferPosition++];
 	}
 	
+
 	/**
 	 * Turns the Packet information (control, destAddr, srcAddr, buffer, and CRC) into an array of bytes
 	 * @return the byte array representing the frame to transmit
@@ -73,16 +78,42 @@ public class Packet {
 		
 		//data bytes
 		int bufferPos = 6;
-		for(int i=data.length-1; i >= 0; i--)
+		for(int i = data.length-1; i >= 0; i--)
 			buffer[bufferPos++] = data[i];
 		
 		//CRC bytes filled to all ones
-		for(int i=buffer.length-1; i>buffer.length-5;i--)
-			buffer[i] = (byte)-1;
+		for(int i = buffer.length-1; i > buffer.length - 5; i--)
+			buffer[i] = (byte) -1;
 		
 		return buffer; 
 	}
 	
+	
+	/**
+	 * Correctly formats the control instance bytes for later transformation
+	 */
+	private void buildControlBytes(){
+		control <<= 1; 
+		if(retry)
+			control++;
+		control <<= 12;
+		control += (seqNum &0x1FF);		
+	}
+
+
+	/**
+	 * String representation of the Packet
+	 */
+	public String toString(){
+		return (control + " | " + destAddr + " | " + srcAddr + " | " + data);
+	}
+
+
+
+//---------------------------------------------------------------------------------------------------//
+//---------------------------------------- Getters & Setters ----------------------------------------//
+//---------------------------------------------------------------------------------------------------//
+
 	/**
 	 * Gives the data message back in byte form.
 	 * @return the data as a byte array
@@ -114,24 +145,4 @@ public class Packet {
 	public void setAcked(boolean isAcked) {
 		this.isAcked = isAcked;
 	}
-	
-	/**
-	 * Correctly formats the control instance bytes for later transformation
-	 */
-	private void buildControlBytes(){
-		control <<= 1; 
-		if(retry)
-			control++;
-		control <<= 12;
-		control += (seqNum &0x1FF);		
-	}
-	
-	/**
-	 * String representation of the Packet
-	 */
-	public String toString(){
-		return "";
-	}
-	
-	
 }
