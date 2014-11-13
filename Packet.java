@@ -57,6 +57,7 @@ public class Packet {
 		data = new byte[recvPacket.length - 10];
 		System.arraycopy(recvPacket, 6, data, 0, data.length);
 
+		//from when we reversed the data
 		// data = new byte[recvPacket.length - 10];//create the data buffer with correct size
 		// int bufferPosition = 6; 
 		// for(int i = data.length-1; i >= 0; i--) //start taking from recvPacket at index 6 and put it at the end of the data buffer
@@ -89,6 +90,7 @@ public class Packet {
 		for(int i = 0; i < data.length-1; i++)
 			buffer[bufferPos++] = data[i];
 
+		//from when we reversed the data
 		// int bufferPos = 6;
 		// for(int i = data.length-1; i >= 0; i--)
 		// 	buffer[bufferPos++] = data[i];
@@ -112,11 +114,6 @@ public class Packet {
 		control += (seqNum &0x1FF);		
 	}
 
-	// private void buildReceivedPacket(){
-	// 	packet = new byte[data.length + 10];
-
-	// 	packet[0] = control 
-	// }
 
 	/**
 	 * String representation of the Packet

@@ -70,7 +70,6 @@ public class LinkLayer implements Dot11Interface {
     try{
       //receive the packet
   	  packet = receiverBuf.take();
-      output.println(Arrays.toString(packet.toBytes()));
   	  byte[] packetData = packet.getPacket();
 
       //put information in the transmission
