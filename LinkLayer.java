@@ -34,7 +34,7 @@ public class LinkLayer implements Dot11Interface {
     this.output = output;      
     theRF = new RF(null, null);
     output.println("LinkLayer: Constructor ran.");
-    senderBuf= new ArrayDeque<Packet>(); //TEMPORARILY SET TO 10
+    senderBuf = new ArrayDeque<Packet>(); //TEMPORARILY SET TO 10
     receiverBuf = new ArrayBlockingQueue<Packet>(10); //TEMPORARILY SET TO 10
     
     Thread sender  = new Thread(new Sender(theRF, senderBuf));
@@ -52,9 +52,8 @@ public class LinkLayer implements Dot11Interface {
   public int send(short dest, byte[] data, int len) {
     Packet packet = new Packet((short)0, dest, ourMAC, data);
 
-    output.println("LinkLayer: Sending "+len+" bytes to "+dest);
-    System.out.println(Arrays.toString(packet.toBytes()));
-    System.out.println(Arrays.toString(new Packet(packet.toBytes()).toBytes()) + "\n");//fills a packet's variables and pulls the bytes from there
+    output.println("LinkLayer: Sending " + len + " bytes to " + dest);
+
     senderBuf.push(packet); //have to fill senderBuf with the data from packet
     return len;
   }
@@ -66,18 +65,22 @@ public class LinkLayer implements Dot11Interface {
   */
   public int recv(Transmission t) {
     output.println("LinkLayer: Pretending to block on recv()");
-    //checks receiver array
-    	//if so it takes it and hands it to transmission and returns number of bytes received
-    	//else just waits
+    
     Packet packet;
     try{
+      //receive the packet
   	  packet = receiverBuf.take();
-  	  byte[] dataBuf = packet.getDatabuf();
-  	  t.setBuf(dataBuf);
+      output.println(Arrays.toString(packet.toBytes()));
+  	  byte[] packetData = packet.getPacket();
+
+      //put information in the transmission
+  	  t.setBuf(packetData);
   	  t.setSourceAddr(packet.getSourceAddr());
   	  t.setDestAddr(ourMAC);
-  	  return dataBuf.length+10;
-    }catch(InterruptedException e){
+
+  	  return packetData.length;
+
+    } catch(InterruptedException e){
   	  System.err.println("Receiver interrupted!");
     }
     

@@ -16,6 +16,8 @@ public class Packet {
 	private byte[] data;		//packet's data
 
 	private boolean isAcked;	//defaults to false
+
+	private byte[] packet;
 	
 
 	/**
@@ -39,26 +41,32 @@ public class Packet {
 	 * @param the byte array received from the rf layer
 	 */
 	public Packet(byte[] recvPacket){
-		
+
+		packet = recvPacket;
 		//build control piece
 		control = (short) ((recvPacket[0] << 8 ) + recvPacket[1]);
 		
 		//destination bytes
 		destAddr = (short) (((recvPacket[2] & 0xFF) << 8) + (recvPacket[3] & 0xFF));
+		System.out.println(destAddr);
 				
 		//source bytes
 		srcAddr = (short) (((recvPacket[4] & 0xFF) << 8) + (recvPacket[5] & 0xFF));
 		
 		//data bytes
-		data = new byte[recvPacket.length-10];//create the data buffer with correct size
-		int bufferPosition = 6; 
-		for(int i = data.length-1; i >= 0; i--) //start taking from recvPacket at index 6 and put it at the end of the data buffer
-			data[i] = recvPacket[bufferPosition++];
+		data = new byte[recvPacket.length - 10];
+		System.arraycopy(recvPacket, 6, data, 0, data.length);
+
+		// data = new byte[recvPacket.length - 10];//create the data buffer with correct size
+		// int bufferPosition = 6; 
+		// for(int i = data.length-1; i >= 0; i--) //start taking from recvPacket at index 6 and put it at the end of the data buffer
+		// 	data[i] = recvPacket[bufferPosition++];
 	}
 	
 
 	/**
 	 * Turns the Packet information (control, destAddr, srcAddr, buffer, and CRC) into an array of bytes
+	 * FOR SENDING ONLY
 	 * @return the byte array representing the frame to transmit
 	 */
 	public byte[] toBytes(){
@@ -78,8 +86,12 @@ public class Packet {
 		
 		//data bytes
 		int bufferPos = 6;
-		for(int i = data.length-1; i >= 0; i--)
+		for(int i = 0; i < data.length-1; i++)
 			buffer[bufferPos++] = data[i];
+
+		// int bufferPos = 6;
+		// for(int i = data.length-1; i >= 0; i--)
+		// 	buffer[bufferPos++] = data[i];
 		
 		//CRC bytes filled to all ones
 		for(int i = buffer.length-1; i > buffer.length - 5; i--)
@@ -88,7 +100,7 @@ public class Packet {
 		return buffer; 
 	}
 	
-	
+
 	/**
 	 * Correctly formats the control instance bytes for later transformation
 	 */
@@ -100,6 +112,11 @@ public class Packet {
 		control += (seqNum &0x1FF);		
 	}
 
+	// private void buildReceivedPacket(){
+	// 	packet = new byte[data.length + 10];
+
+	// 	packet[0] = control 
+	// }
 
 	/**
 	 * String representation of the Packet
@@ -120,6 +137,14 @@ public class Packet {
 	 */
 	public byte[] getDatabuf(){
 		return data;
+	}
+
+	/**
+	* Returns the ENTIRE packet's data
+	* @return the entire packet's data
+	*/
+	public byte[] getPacket(){
+		return packet;
 	}
 	
 	/**
