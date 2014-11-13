@@ -13,7 +13,7 @@ import rf.RF;
 public class Sender implements Runnable{
 
 	private RF rf;
-	private long sendTime;
+	//private long sendTime; //currently not used
 	private ArrayDeque<Packet> senderBuf;
 	
 	/**

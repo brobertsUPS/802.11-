@@ -14,7 +14,7 @@ import java.util.concurrent.*;
 public class Receiver implements Runnable {
 
 	private RF rf;
-	//private long recvTime;
+	//private long recvTime;//currently not used
 	private ArrayDeque<Packet> senderBuf;
 	private ArrayBlockingQueue<Packet> receiverBuf;
 	

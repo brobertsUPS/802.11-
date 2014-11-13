@@ -41,8 +41,8 @@ public class Packet {
 	 * @param the byte array received from the rf layer
 	 */
 	public Packet(byte[] recvPacket){
-
 		packet = recvPacket;
+
 		//build control piece
 		control = (short) ((recvPacket[0] << 8 ) + recvPacket[1]);
 		
