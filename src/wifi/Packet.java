@@ -11,7 +11,6 @@ public class Packet {
 	private short destAddr;
 	private short srcAddr;
 	private byte[] data;
-	private boolean dataWaiting;
 	private boolean retry;
 	private short seqNum;
 	private boolean isAcked; //defaults to false
@@ -32,7 +31,8 @@ public class Packet {
 	}
 	
 	/**
-	 * Creates a packet from a received packet
+	 * Creates a Packet from a byte array
+	 * @param the byte array received from the rf layer
 	 */
 	public Packet(byte[] recvPacket){
 		
@@ -40,12 +40,12 @@ public class Packet {
 		control = (short)((recvPacket[0] << 8 ) + recvPacket[1]);
 		
 		//destination bytes
-		destAddr = (short)((recvPacket[2] << 8) + recvPacket[3]);
+		destAddr = 	(short) (((recvPacket[2] & 0xFF) << 8) + (recvPacket[3] & 0xFF));
 				
 		//source bytes
-		srcAddr = (short)((recvPacket[4]) <<8 + recvPacket[5]);
-				
-		//data bytes (data size is total size - 10)
+		srcAddr = (short) (((recvPacket[4] & 0xFF) << 8) + (recvPacket[5] & 0xFF));
+		
+		//data bytes
 		data = new byte[recvPacket.length-10];//create the data buffer with correct size
 		int bufferPosition = 6; 
 		for(int i=data.length-1; i >=0; i--) //start taking from recvPacket at index 6 and put it at the end of the data buffer
@@ -53,22 +53,22 @@ public class Packet {
 	}
 	
 	/**
-	 * Takes the long passed in and returns it as a byte array
-	 * @return the byte representation of the long
+	 * Turns the Packet information (control, destAddr, srcAddr, buffer, and CRC) into an array of bytes
+	 * @return the byte array representing the frame to transmit
 	 */
 	public byte[] toBytes(){
 		byte[] buffer = new byte[data.length+10];
 		
 		//build control piece
-		buffer[0] = (byte) ((control >>> 8) & 0xFF);   
+		buffer[0] = (byte) (control >>> 8);   
 		buffer[1] = (byte) (control & 0xFF);   
 		
 		//destination bytes
-		buffer[2] = (byte) ((destAddr >>> 8) & 0xFF);  
+		buffer[2] = (byte) (destAddr >>> 8);  
 		buffer[3] = (byte) (destAddr & 0xFF);   
 		
 		//source bytes
-		buffer[4] = (byte) ((srcAddr >>> 8) & 0xFF);   
+		buffer[4] = (byte) (srcAddr >>> 8);   
 		buffer[5] = (byte) (srcAddr & 0xFF);   
 		
 		//data bytes
@@ -84,7 +84,7 @@ public class Packet {
 	}
 	
 	/**
-	 * Gives the data back in byte form.
+	 * Gives the data message back in byte form.
 	 * @return the data as a byte array
 	 */
 	public byte[] getDatabuf(){
@@ -100,23 +100,23 @@ public class Packet {
 	}
 	
 	/**
-	 * 
-	 * @return
+	 * Determines if the Packet is an ACK
+	 * @return true if this packet is an ACK
 	 */
 	public boolean isAcked() {
 		return isAcked;
 	}
 
 	/**
-	 * 
-	 * @param isAcked
+	 * Marks the Packet as an ACK or not
+	 * @param isAcked is true if the Packet is an ACK
 	 */
 	public void setAcked(boolean isAcked) {
 		this.isAcked = isAcked;
 	}
 	
 	/**
-	 * Turns the control instance into a byte array.
+	 * Correctly formats the control instance bytes for later transformation
 	 */
 	private void buildControlBytes(){
 		control <<= 1; 
@@ -127,7 +127,7 @@ public class Packet {
 	}
 	
 	/**
-	 * 
+	 * String representation of the Packet
 	 */
 	public String toString(){
 		return "";

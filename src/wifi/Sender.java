@@ -32,7 +32,8 @@ public class Sender implements Runnable{
 				System.err.println("Sender interrupted!");
 			}
 		}
-		rf.transmit(packetBuf.poll().toBytes());
+		if(packetBuf.size()>0) //only send if we have something in the ArrayDeque
+			rf.transmit(packetBuf.poll().toBytes());
 		
 	}
 

@@ -15,7 +15,7 @@ public class LinkLayer implements Dot11Interface {
    private RF theRF;           // You'll need one of these eventually
    private short ourMAC;       // Our MAC address
    private PrintWriter output; // The output stream we'll write to
-   private ArrayDeque senderBuf;
+   private ArrayDeque<Packet> senderBuf;
    private ArrayBlockingQueue<Packet> receiverBuf;
 
    /**
@@ -37,14 +37,6 @@ public class LinkLayer implements Dot11Interface {
       
       sender.start();
       receiver.start();
-      
-      try{
-    	  sender.join();
-    	  receiver.join();
-      }
-      catch(InterruptedException e){
-    	  System.err.println("Thread was interrupted!" + e);
-      }
    }
 
    /**
@@ -53,11 +45,11 @@ public class LinkLayer implements Dot11Interface {
     */
    public int send(short dest, byte[] data, int len) {
 	  Packet packet = new Packet((short)0, dest, ourMAC, data);
+	  
       output.println("LinkLayer: Sending "+len+" bytes to "+dest);
-      
       System.out.println(Arrays.toString(packet.toBytes()));
-      
-      theRF.transmit(data);
+      System.out.println(Arrays.toString(new Packet(packet.toBytes()).toBytes()) + "\n");//fills a packet's variables and pulls the bytes from there
+      senderBuf.push(packet); //have to fill senderBuf with the data from packet
       return len;
    }
 
@@ -83,9 +75,6 @@ public class LinkLayer implements Dot11Interface {
       }
       
       return -1;
-     
-      
-     
       //Commented out because the ArrayBlockingQueue does this with take() and put()
 //      while(receiverBuf.isEmpty()){ 
 //    	 try{
@@ -94,8 +83,7 @@ public class LinkLayer implements Dot11Interface {
 //    		 System.err.println("Receiver interrupted!");
 //    	 }
 //      }
-      
-      //return 0;
+
    }
 
    /**

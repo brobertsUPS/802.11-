@@ -23,7 +23,7 @@ public class Receiver implements Runnable {
 	}
 	
 	/**
-	 * 
+	 * Begins waiting for the rf layer to receive and puts it in the receiverBuf
 	 */
 	public void run() {
 		//rf.receive waits for message on channel
