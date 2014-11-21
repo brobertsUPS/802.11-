@@ -87,7 +87,7 @@ public class Packet {
 		
 		//data bytes
 		int bufferPos = 6;
-		for(int i = 0; i < data.length-1; i++)
+		for(int i = 0; i < data.length; i++) //make sure to put all of the data in the buffer
 			buffer[bufferPos++] = data[i];
 
 		//from when we reversed the data
