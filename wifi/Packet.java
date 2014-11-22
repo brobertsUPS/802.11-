@@ -1,4 +1,5 @@
-import wifi.*;
+package wifi;
+
 /**
  * A class to represent an 802.11~ frame.
  * @author Nate Olderman

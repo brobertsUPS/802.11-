@@ -1,4 +1,5 @@
-import wifi.*;
+package wifi;
+
 import rf.RF;
 
 import java.util.ArrayDeque;
