@@ -71,14 +71,14 @@ public class LinkLayer implements Dot11Interface {
     try{
       //receive the packet
   	  packet = receiverBuf.take();
-  	  byte[] packetData = packet.getPacket();
+  	  byte[] messageData = packet.getDatabuf();
 
       //put information in the transmission
-  	  t.setBuf(packetData);
+  	  t.setBuf(messageData);				//set the buffer to the data from the message
   	  t.setSourceAddr(packet.getSourceAddr());
   	  t.setDestAddr(ourMAC);
 
-  	  return packetData.length;
+  	  return messageData.length;
 
     } catch(InterruptedException e){
   	  System.err.println("Receiver interrupted!");
