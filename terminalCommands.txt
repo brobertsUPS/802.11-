@@ -1,0 +1,5 @@
+compile:
+javac -cp .:classFiles.jar:src/wifi -d bin */*/*.java
+
+run:
+java -cp .:../classFiles.jar:wifi wifi/WifiClient
