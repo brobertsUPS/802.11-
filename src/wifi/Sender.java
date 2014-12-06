@@ -180,12 +180,15 @@ public class Sender implements Runnable{
 	private void waitForAck(){										//Get here from wait IFS
 		long startTime = rf.clock();
 
-
 		while(!senderBuf.isEmpty()){								//make sure there is something on the buffer (could have pulled off in a previous iteration of the while)
-			
 			System.out.println("SENDER calling isAcked() : "+senderBuf.peek().isAcked());
 			
-			if(senderBuf.peek().isAcked()){
+			//if it was a beacon, don't wait for an ack
+			if(senderBuf.peek().getFrameType() == 2){
+				senderBuf.pop();
+				break;
+			}
+			else if(senderBuf.peek().isAcked()){
 				System.out.println("The Packet has been acked");
 				senderBuf.pop(); 									//since it is acked we pull it off
 				windowSize = 1; 									//resetting window size
