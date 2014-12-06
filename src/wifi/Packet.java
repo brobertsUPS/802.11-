@@ -18,7 +18,7 @@ public class Packet {
 	private short destAddr; //destination address for packet
 	private short srcAddr; //source address for packet
 	
-	private byte[] data; //packet's data only (without frame)
+	private byte[] data; //packet's data only, without frame
 	private byte[] packet; //the packet in it's entirety
 	
 	private boolean isACKed; //if this packet has been ACKed
@@ -42,6 +42,7 @@ public class Packet {
 		destAddr = destination;
 		srcAddr = source;
 		data = theData;
+
 		retryAttempts = 0;
 		checksum = new CRC32();
 		corrupted = false;
@@ -55,10 +56,10 @@ public class Packet {
 		packet = recvPacket;
 
 		//build individual pieces of control
-		frameType = (short)((recvPacket[0] & 0xF0) >> 4);//get out the FrameType and the Retry bit in one number
-		retry = (short)(frameType % 2);//if it is odd, then the retry bit (that was the least significant bit in this 4 bit number) was 1
+		frameType = (short) ((recvPacket[0] & 0xF0) >> 4);//get out the FrameType and the Retry bit in one number
+		retry = (short) (frameType % 2);//if it is odd, then the retry bit (that was the least significant bit in this 4 bit number) was 1
 		frameType >>= 1;//shift over to get rid of retry bit
-		seqNum = (short) ((short)((recvPacket[0] << 8 ) + recvPacket[1]) & 0xFFF);//pull out sequence number
+		seqNum = (short) (((recvPacket[0] & 0xFF) << 8 ) + (recvPacket[1] & 0xFFF));//pull out sequence number
 
 		//destination bytes
 		destAddr = (short) (((recvPacket[2] & 0xFF) << 8) + (recvPacket[3] & 0xFF));
@@ -67,11 +68,11 @@ public class Packet {
 		srcAddr = (short) (((recvPacket[4] & 0xFF) << 8) + (recvPacket[5] & 0xFF));
 		
 		//data bytes
-		data = new byte[recvPacket.length - 10];
+		data = new byte[recvPacket.length - 10]; //10 is always the number of bytes in the packet besides the data
 		System.arraycopy(recvPacket, 6, data, 0, data.length);
 		
 		int pktLen = recvPacket.length;
-		int checksumVal = (int) (((recvPacket[pktLen-4] & 0xFF) <<24) + ((recvPacket[pktLen-3] & 0xFF) << 16) +
+		int checksumVal = (int) (((recvPacket[pktLen-4] & 0xFF) << 24) + ((recvPacket[pktLen-3] & 0xFF) << 16) +
 				((recvPacket[pktLen-2] & 0xFF) << 8) + (recvPacket[pktLen-1] & 0xFF));
 		
 		checksum.update(recvPacket, 0, recvPacket.length-4);			//get the checksum for the received packet
@@ -90,8 +91,9 @@ public class Packet {
 	public byte[] toBytes(){
 		byte[] buffer = new byte[data.length + 10];
 		int bufLen = buffer.length;
+
 		//build control piece
-		buffer[0] = (byte) ((byte)(frameType << 1) + retry);
+		buffer[0] = (byte) (((frameType & 0xFF) << 1) + retry);
 		buffer[0]  = (byte) ((buffer[0] << 4) + (seqNum >>> 8  & 0xF));
 		buffer[1] = (byte) (seqNum & 0xFF);
 		
@@ -109,16 +111,13 @@ public class Packet {
 			buffer[bufferPos++] = data[i];
 		
 		//CRC bytes filled
-		checksum.update(buffer, 0, bufLen-4);			//get the checksum for everything up to the CRC bytes
+		checksum.update(buffer, 0, bufLen - 4);			//get the checksum for everything up to the CRC bytes
 		int checksumVal = (int)checksum.getValue();			//long representation of the checksum 
 		
 		buffer[bufLen-4] = (byte) (checksumVal >>> 24);			
 		buffer[bufLen-3] = (byte) (checksumVal >>> 16);
 		buffer[bufLen-2] = (byte) (checksumVal >>> 8);
 		buffer[bufLen-1] = (byte) (checksumVal & 0xFF);							//end byte
-		
-//		for(int i = buffer.length-1; i > buffer.length - 5; i--)
-//			buffer[i] = (byte) -1;
 		
 		return buffer;
 	}
@@ -146,7 +145,7 @@ public class Packet {
 	 * Gives the data message back in byte form.
 	 * @return the data as a byte array
 	 */
-	public byte[] getDatabuf(){
+	public byte[] getDataBuf(){
 		return data;
 	}
 	
@@ -220,5 +219,12 @@ public class Packet {
 	 */
 	public void setSeqNum(short sequenceNum){
 		seqNum = sequenceNum;
+	}
+
+	/**
+	* Gets whether or not the packet was corrupted
+	*/
+	public boolean isCorrupt(){
+		return corrupted;
 	}
 }

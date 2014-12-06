@@ -12,24 +12,36 @@ import rf.RF;
  *
  */
 public class Sender implements Runnable{
+	private static final int DIFS = RF.aSIFSTime + (2 * RF.aSlotTime);
+
+	//IEEE spec says beacon interval should be 102,400 microseconds, this is in milliseconds
+	private static final double BEACON_INTERVAL = 102.4; 
+	private long lastBeaconTime;
+	
+	private long[] clockOffset;
+	private short ourMAC;
 	private RF rf;
-	//private long sendTime; //currently not used
 	private ArrayDeque<Packet> senderBuf;
 	private int backOffCount;
 	private int windowSize;
-	
-	private static final int DIFS = RF.aSIFSTime + (2* RF.aSlotTime);
+
 	
 	/**
 	 * Makes a new Sender object that continually checks the channel for idle time to send packets
 	 * @param theRF the RF layer to send packets out through
 	 * @param senderBuffer the queue of packets needing to be sent
+	 * @param ourMACAddr the MAC address
+	 * @param currentClockOffset the offset from the time in rf.clock(), it is an array to be used as a pointer and shared with the reciever
 	 */
-	public Sender(RF theRF, ArrayDeque<Packet> senderBuffer){
+	public Sender(RF theRF, ArrayDeque<Packet> senderBuffer, short ourMACAddr, long[] currentClockOffset){
 		rf = theRF;
 		senderBuf = senderBuffer;
+		ourMAC = ourMACAddr;
+		clockOffset = currentClockOffset;
+
 		backOffCount = 0;
 		windowSize = 1;
+		lastBeaconTime = 0;
 	}
 	
 	/**
@@ -44,18 +56,17 @@ public class Sender implements Runnable{
 	 * Waits for frame to become available
 	 */
 	private void waitForFrame(){
-		
+		checkBeacon();
+
 		if(!senderBuf.isEmpty()){
 			System.out.println("SenderBuf frame type "+senderBuf.peek().getFrameType());
 			if(senderBuf.peek().getFrameType() == 1){				// ths is an ACK we want to send
 				waitForIdleChannelToACK();							// checks if channel is idle and then waits SIFS
-//				System.out.println("SenderBuf initial size: " + senderBuf.size());
 				rf.transmit(senderBuf.peek().toBytes());			//transmit the ack
-//				System.out.println("Sender transmitted an ack packet");
+
 				senderBuf.remove();									//pull the ack message off that we want to send
-//				System.out.println("SenderBuf size: " + senderBuf.size());
 			}else{													//not an ack we want to send
-				if(!rf.inUse())										//
+				if(!rf.inUse())
 					waitIFS();
 				else
 					waitForIdleChannel();
@@ -195,10 +206,10 @@ public class Sender implements Runnable{
 				
 			}
 			
-			if(rf.clock()-startTime >= 10000){ 	 					//if it has taken longer than a ten seconds, so timeout and retransmit
+			if(rf.clock() - startTime >= 10000){ 	 					//if it has taken longer than a ten seconds, so timeout and retransmit
 				System.out.println("SENDER got to timeout and now trying to retransmit");
-				windowSize *=2; 									//double window size
-				backOffCount = (int) (Math.random()*(windowSize + 1)); //give the option to roll a zero
+				windowSize *=2; 										//double window size
+				backOffCount = (int) (Math.random()*(windowSize + 1));  //give the option to roll a zero
 
 				if(rf.inUse())
 					waitForIdleChannel();
@@ -227,5 +238,26 @@ public class Sender implements Runnable{
 		}
 		backOffWaitIFS();//channel is idle so we start doing our backoff
 	}
-	
+
+	/**
+	* Checks if the beacon should be sent
+	* If it should, creates a beacon packet and puts on the senderBuffer
+	*/
+	private void checkBeacon(){
+		//lastBeaconTime isn't used or updated with offset to make comparisons quicker, however it is added to the clock offset in the packet
+		if(rf.clock() - lastBeaconTime >= BEACON_INTERVAL){
+			lastBeaconTime = rf.clock();
+
+			//make a data buffer with the current clock time
+			long beaconTime = lastBeaconTime + clockOffset[0];
+			byte[] beaconTimeArray = new byte[8];//8 bytes for the beacon time
+			for(int i = beaconTimeArray.length - 1; i >= 0; i--){
+				beaconTimeArray[i] = (byte)(beaconTime & 0xFF);
+				beaconTime = beaconTime >>> 8;
+			}
+
+			Packet beaconPacket = new Packet((short)2, (short)0, (short)0, ourMAC, beaconTimeArray);
+			senderBuf.addFirst(beaconPacket);
+		}
+	}
 }

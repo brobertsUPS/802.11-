@@ -18,15 +18,15 @@ import java.util.HashMap;
  */
 public class LinkLayer implements Dot11Interface {
 	private RF theRF;
-	private short ourMAC; //Our MAC address
-	private PrintWriter output; //The output stream we'll write to
-	private ArrayDeque<Packet> senderBuf; //the buffer for sending packets
-	private ArrayBlockingQueue<Packet> receiverBuf; //the buffer for receiving packets
+	private short ourMAC; 										//Our MAC address
+	private PrintWriter output; 								//The output stream we'll write to
+
+	private ArrayDeque<Packet> senderBuf; 						//the buffer for sending packets
+	private ArrayBlockingQueue<Packet> receiverBuf; 			//the buffer for receiving packets
 	
-	private HashMap<Short, Integer> sendSeqNums;				 //seqNums for what we send out. key is destinationAddr, value is seqNum
+	private HashMap<Short, Integer> sendSeqNums;				//seqNums for what we send out. key is destinationAddr, value is seqNum
 	
 	private int slotChoice;
-	private int beaconInterval;
 	
 	
 	/**
@@ -36,18 +36,20 @@ public class LinkLayer implements Dot11Interface {
 	 * @param output Output stream associated with GUI
 	 */
 	public LinkLayer(short ourMAC, PrintWriter output){
+		output.println("LinkLayer: Constructor ran.");
+
 		this.ourMAC = ourMAC;
 		this.output = output;
+
 		theRF = new RF(null, null);
-		output.println("LinkLayer: Constructor ran.");
 		senderBuf = new ArrayDeque<Packet>(); //TEMPORARILY SET TO 10
 		receiverBuf = new ArrayBlockingQueue<Packet>(10); //TEMPORARILY SET TO 10
-		
 		sendSeqNums = new HashMap<Short, Integer>();
 		
+		long[] clockOffset = {0};//starts the clock offset at 0
+		Thread sender = new Thread(new Sender(theRF, senderBuf, ourMAC, clockOffset));
+		Thread receiver = new Thread(new Receiver(theRF, senderBuf, receiverBuf, ourMAC, output, clockOffset));
 		
-		Thread sender = new Thread(new Sender(theRF, senderBuf));
-		Thread receiver = new Thread(new Receiver(theRF, senderBuf, receiverBuf, ourMAC, output));
 		sender.start();
 		receiver.start();
 	}
@@ -57,7 +59,6 @@ public class LinkLayer implements Dot11Interface {
 	 * of bytes to send. See docs for full description.
 	 */
 	public int send(short dest, byte[] data, int len) {
-		
 		Packet packet = new Packet((short)0, getNextSeqNum(dest, sendSeqNums), dest, ourMAC, data);
 		
 		output.println("LinkLayer: Sending " + len + " bytes to " + dest);
@@ -70,8 +71,8 @@ public class LinkLayer implements Dot11Interface {
 	 * the Transmission object. See docs for full description.
 	 */
 	public int recv(Transmission t) {
-		
 		output.println("LinkLayer: Pretending to block on recv()");
+
 		Packet packet;
 		try{
 			packet = receiverBuf.take();//receive the packet
@@ -114,10 +115,11 @@ public class LinkLayer implements Dot11Interface {
 	 * Pushes the packet to the layer above
 	 */
 	private int prepareForLayerAbove(Transmission t, Packet packet){
-		byte[] packetData = packet.getDatabuf();
+		byte[] packetData = packet.getDataBuf();
 		t.setBuf(packetData);
 		t.setSourceAddr(packet.getSrcAddr());
 		t.setDestAddr(ourMAC);
+
 		return packetData.length;
 	}
 	
