@@ -18,15 +18,14 @@ import java.util.*;
  */
 public class Receiver implements Runnable {
 	private RF rf;
-	//private long recvTime;//currently not used
+	private short ourMac;
+	private long[] clockOffset; //array with one item in it, used as a pointer
+	private PrintWriter output;
+
 	private ArrayDeque<Packet> senderBuf;
 	private ArrayBlockingQueue<Packet> receiverBuf;
-	private short ourMac;
-	private long[] clockOffset;
 	
-	private PrintWriter output;
-	
-	private HashMap<Short, Short> recvSeqNums; 				//expected seqNum for stuff we get from other hosts
+	private HashMap<Short, Short> recvSeqNums; 					//expected seqNum for stuff we get from other hosts
 	private HashMap<Short, ArrayList<Packet>> outOfOrderTable;	//packets that have a higher seqNum than we are expecting for the srcAddress
 	
 	/**
@@ -63,68 +62,69 @@ public class Receiver implements Runnable {
 				//else if it's destination is our mac address
 				else if(packet.getDestAddr() == ourMac){
 					
-					if(receiverBuf.size() == 4){					//Hit limit on number of packets we can queue
-						break; ////ignore
-					}
+					if(receiverBuf.size() == 4){ break; }////ignore -----NOTE: what is this??-----
 
-					if((packet.getFrameType() == 1)  &&  (packet.getSeqNum() == senderBuf.peek().getSeqNum())){//if its an ack AND it has the same sequence number
+					//if its an ack AND it has the same sequence number
+					if((packet.getFrameType() == 1)  &&  (packet.getSeqNum() == senderBuf.peek().getSeqNum()))
 						senderBuf.peek().setAsAcked();		//tell sender that that packet was ACKed
-					}
-					else{//not an ack we received
-						short expectedSeqNum;
-						
-						if(!recvSeqNums.containsKey(packet.getSrcAddr())){//if it hasn't received from this address before
-							recvSeqNums.put(packet.getSrcAddr(), (short) 0); //assuming it starts at zero
-							expectedSeqNum = 0;
-							outOfOrderTable.put(packet.getSrcAddr(), new ArrayList<Packet>(4096));
-						}
-						else
-							expectedSeqNum = recvSeqNums.get(packet.getSrcAddr()).shortValue(); //changing from when we update it below to when we check it on next loop through
-							
-						System.out.println("EXPECTED SEQNUM IN RECEIVER " + expectedSeqNum);
-						System.out.println("WHAT THE EZPECTED IS: " + packet.getSeqNum());
-						ArrayList<Packet> packets = outOfOrderTable.get(packet.getSrcAddr());
-						if(expectedSeqNum == packet.getSeqNum()){
-							receiverBuf.put(packet);		//if received successfully we need to put an ack in senderBuf
-							
-							//***************************************************************************************************************************
-							packet.makeIntoACK();			//make an ack if it was the one we expected
-							senderBuf.addFirst(packet);
-							
-							//****Make sure to use the packets destination address now that we have made the packet an ack and swapped the addresses already************
-							recvSeqNums.put(packet.getDestAddr(), (short)(expectedSeqNum + 1));	//only update the seqNum if we got the right one
-							
-							//****************************************************************************************************************************
-							//if there are things waiting
-							if(!packets.isEmpty()){ //*************************sends us back to Packet packet = new Packet(rf.receive());
-								for (Packet queuedPacket : packets) { //put everything on the recieverbuffer until you hit a gap
-									if(queuedPacket == null)
-										break;
-									receiverBuf.put(packet);
-									recvSeqNums.put(packet.getSrcAddr(), (short)(expectedSeqNum + 1));	//also update expected if we had packets stored
-								}
-							}
-						}
-						else if(expectedSeqNum < packet.getSeqNum()){ 
-							output.println("Detected a gap in the sequence nmbers on incoming data packets from host: " + packet.getSrcAddr());
-							//packets.add(packet.getSeqNum() - expectedSeqNum - 1, packet);  				//**********************************THIS GETS DESTROYED AND WE NEVER KEPT THE PACKET IN THE TABLE
-							outOfOrderTable.get(packet.getSrcAddr()).add(packet.getSeqNum() - expectedSeqNum - 1, packet);//adding the packet to the spot in the arraylist corresponding to the distance from the expected sequence number -1 to maintain starting at 0
-						}
-						//don't put it on the buffer if the received sequence number is less than the expected because we already got it
-						
-						//recvSeqNums.put(packet.getSrcAddr(), (short)(expectedSeqNum+1));
-						
-						//change the packet into an ACK and just send it back out to the other host
-						//packet.makeIntoACK();
-						//senderBuf.addFirst(packet);
-					}
 					
+					//not an ack so recieve the data
+					else
+						checkSeqNums(packet);
 				}				
 			} catch (InterruptedException e) {
 				System.err.println("Receiver interrupted!");
 			}
 		}
 	}
+
+
+	/*
+	* Recieves 
+	*
+	*/
+	private void checkSeqNums(Packet packet){
+		short expectedSeqNum;
+
+		//check whether or not we have recieved from this address before
+		if(!recvSeqNums.containsKey(packet.getSrcAddr())){
+			recvSeqNums.put(packet.getSrcAddr(), (short) 0); //assuming it starts at zero
+			expectedSeqNum = 0;
+			outOfOrderTable.put(packet.getSrcAddr(), new ArrayList<Packet>(4096));
+		}
+		else
+			expectedSeqNum = recvSeqNums.get(packet.getSrcAddr()).shortValue(); //getting what sequence number we expect
+
+		
+		ArrayList<Packet> packets = outOfOrderTable.get(packet.getSrcAddr());//get the array for packets with higher than expected seq num
+
+		//if the sequence number is what we expect
+		if(expectedSeqNum == packet.getSeqNum()){
+			receiverBuf.put(packet); //put it in the reciever buf to be taken by the layer above
+			recvSeqNums.put(packet.getSrcAddr(), (short)(expectedSeqNum + 1)); //update the expected sequence number
+			
+			packet.makeIntoACK(); //to save time just make the same packet into an ACK
+			senderBuf.addFirst(packet); //add the (now) ACK to the senderBuf to be sent
+			
+			//check if there are packets with higher seqNums waiting in the queue now that we found the expected seqNum
+			if(!packets.isEmpty()){
+				for(Packet queuedPacket : packets){ //go through everything in the queue, and give it to the layer above until it hits a sequence number gap (missing a packet)
+					if(queuedPacket == null)//if its a gap, break out of loop
+						break;
+
+					receiverBuf.put(queuedPacket);
+					recvSeqNums.put(queuedPacket.getSrcAddr(), (short)(expectedSeqNum + 1));//update expected seqNum
+				}
+			}
+		}
+		//if the recieved packet has a higher sequence number than what we expect
+		else if(expectedSeqNum < packet.getSeqNum()){ 
+			output.println("Detected a gap in the sequence nmbers on incoming data packets from host: " + packet.getSrcAddr());
+			//packets.add(packet.getSeqNum() - expectedSeqNum - 1, packet);  				//**********************************THIS GETS DESTROYED AND WE NEVER KEPT THE PACKET IN THE TABLE
+			outOfOrderTable.get(packet.getSrcAddr()).add(packet.getSeqNum() - expectedSeqNum - 1, packet);//adding the packet to the spot in the arraylist corresponding to the distance from the expected sequence number -1 to maintain starting at 0
+		}
+	}
+
 
 	private void updateClockOffset(Packet packet){
 		byte[] beaconTimeArray = packet.getDataBuf();
