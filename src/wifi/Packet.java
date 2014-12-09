@@ -53,6 +53,8 @@ public class Packet {
 	 * @param the byte array received from the rf layer
 	 */
 	public Packet(byte[] recvPacket){
+		checksum = new CRC32();
+		corrupted = false;
 		packet = recvPacket;
 
 		//build individual pieces of control
@@ -94,7 +96,7 @@ public class Packet {
 
 		//build control piece
 		buffer[0] = (byte) (((frameType & 0xFF) << 1) + retry);
-		buffer[0]  = (byte) ((buffer[0] << 4) + (seqNum >>> 8  & 0xF));
+		buffer[0] = (byte) ((buffer[0] << 4) + (seqNum >>> 8  & 0xF));
 		buffer[1] = (byte) (seqNum & 0xFF);
 		
 		//destination bytes

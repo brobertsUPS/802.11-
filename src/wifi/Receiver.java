@@ -107,7 +107,7 @@ public class Receiver implements Runnable {
 						else if(expectedSeqNum < packet.getSeqNum()){ 
 							output.println("Detected a gap in the sequence nmbers on incoming data packets from host: " + packet.getSrcAddr());
 							//packets.add(packet.getSeqNum() - expectedSeqNum - 1, packet);  				//**********************************THIS GETS DESTROYED AND WE NEVER KEPT THE PACKET IN THE TABLE
-							outOfOrderTable.get(packet.getSeqNum()).add(packet.getSeqNum() - expectedSeqNum - 1, packet);//adding the packet to the spot in the arraylist corresponding to the distance from the expected sequence number -1 to maintain starting at 0
+							outOfOrderTable.get(packet.getSrcAddr()).add(packet.getSeqNum() - expectedSeqNum - 1, packet);//adding the packet to the spot in the arraylist corresponding to the distance from the expected sequence number -1 to maintain starting at 0
 						}
 						//don't put it on the buffer if the received sequence number is less than the expected because we already got it
 						

@@ -56,7 +56,7 @@ public class Sender implements Runnable{
 	 * Waits for frame to become available
 	 */
 	private void waitForFrame(){
-		checkBeacon();
+		//checkBeacon();
 
 		if(!senderBuf.isEmpty()){
 			System.out.println("SenderBuf frame type "+senderBuf.peek().getFrameType());
@@ -181,7 +181,7 @@ public class Sender implements Runnable{
 		long startTime = rf.clock();
 
 		while(!senderBuf.isEmpty()){								//make sure there is something on the buffer (could have pulled off in a previous iteration of the while)
-			System.out.println("SENDER calling isAcked() : "+senderBuf.peek().isAcked());
+			//System.out.println("SENDER calling isAcked() : "+senderBuf.peek().isAcked());
 			
 			//if it was a beacon, don't wait for an ack
 			if(senderBuf.peek().getFrameType() == 2){

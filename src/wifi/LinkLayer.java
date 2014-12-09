@@ -95,7 +95,7 @@ public class LinkLayer implements Dot11Interface {
 	 * Passes command info to your link layer. See docs for full description.
 	 */
 	public int command(int cmd, int val) {
-		output.println("LinkLayer: Sending command "+cmd+" with value "+val);
+		output.println("LinkLayer: Sending command " + cmd + " with value " + val);
 		if(cmd == 0){
 			
 		}
