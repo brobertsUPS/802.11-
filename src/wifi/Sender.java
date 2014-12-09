@@ -56,14 +56,12 @@ public class Sender implements Runnable{
 	 * Waits for frame to become available
 	 */
 	private void waitForFrame(){
-		checkBeacon();
+		//checkBeacon();
 
 		if(!senderBuf.isEmpty()){
-			System.out.println("SenderBuf frame type "+senderBuf.peek().getFrameType());
 			if(senderBuf.peek().getFrameType() == 1){				// ths is an ACK we want to send
 				waitForIdleChannelToACK();							// checks if channel is idle and then waits SIFS
 				rf.transmit(senderBuf.peek().toBytes());			//transmit the ack
-
 				senderBuf.remove();									//pull the ack message off that we want to send
 			}else{													//not an ack we want to send
 				if(!rf.inUse())
@@ -180,8 +178,7 @@ public class Sender implements Runnable{
 	private void waitForAck(){										//Get here from wait IFS
 		long startTime = rf.clock();
 
-		while(!senderBuf.isEmpty()){								//make sure there is something on the buffer (could have pulled off in a previous iteration of the while)
-			System.out.println("SENDER calling isAcked() : "+senderBuf.peek().isAcked());
+		while(!senderBuf.isEmpty()){ 							//make sure there is something on the buffer (could have pulled off in a previous iteration of the while)
 			
 			//if it was a beacon, don't wait for an ack
 			if(senderBuf.peek().getFrameType() == 2){
@@ -189,13 +186,15 @@ public class Sender implements Runnable{
 				break;
 			}
 			else if(senderBuf.peek().isAcked()){
+				long timeoutVal = rf.clock() - startTime;
+				
 				System.out.println("The Packet has been acked");
 				senderBuf.pop(); 									//since it is acked we pull it off
 				windowSize = 1; 									//resetting window size
 				break;
 			}
 
-			System.out.println(senderBuf.peek().retry()  + " " + RF.dot11RetryLimit);
+//			System.out.println(senderBuf.peek().retry()  + " " + RF.dot11RetryLimit);
 			if(senderBuf.peek().retry()  >= RF.dot11RetryLimit){  //hit retry limit and it breaks so that it will pull it off the buffer								
 				System.out.println("Hit retry LIMIT");
 				senderBuf.pop();
@@ -203,7 +202,7 @@ public class Sender implements Runnable{
 			}
 			
 			try{
-				Thread.sleep((long)1000);
+				Thread.sleep((long)10000);
 			}
 			catch(Exception e){
 				
@@ -259,7 +258,7 @@ public class Sender implements Runnable{
 				beaconTime = beaconTime >>> 8;
 			}
 
-			Packet beaconPacket = new Packet((short)2, (short)0, (short)0, ourMAC, beaconTimeArray);
+			Packet beaconPacket = new Packet((short)2, (short)0, (short)-1, ourMAC, beaconTimeArray);
 			senderBuf.addFirst(beaconPacket);
 		}
 	}

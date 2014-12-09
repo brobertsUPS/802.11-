@@ -1,5 +1,6 @@
 package wifi;
 
+import java.util.Arrays;
 import java.util.zip.CRC32;
 
 /**
@@ -53,15 +54,18 @@ public class Packet {
 	 * @param the byte array received from the rf layer
 	 */
 	public Packet(byte[] recvPacket){
+		checksum = new CRC32();
+		
 		packet = recvPacket;
 
 		//build individual pieces of control
 		frameType = (short) ((recvPacket[0] & 0xF0) >> 4);//get out the FrameType and the Retry bit in one number
 		retry = (short) (frameType % 2);//if it is odd, then the retry bit (that was the least significant bit in this 4 bit number) was 1
 		frameType >>= 1;//shift over to get rid of retry bit
-		seqNum = (short) (((recvPacket[0] & 0xFF) << 8 ) + (recvPacket[1] & 0xFFF));//pull out sequence number
-
-		//destination bytes
+		seqNum = (short) (((recvPacket[0] & 0xFF) << 8 ) + (recvPacket[1] & 0xFFF));//pull out sequence number//pull out sequence number ************Getting wrong value right now
+		//(short) ((short)((recvPacket[0] << 8 ) + recvPacket[1]) & 0xFFF); //old code to pull out sequence number
+//		System.out.println("SEQNUM IN PACKET " + seqNum);
+		//destination bytes 
 		destAddr = (short) (((recvPacket[2] & 0xFF) << 8) + (recvPacket[3] & 0xFF));
 		
 		//source bytes
@@ -72,15 +76,16 @@ public class Packet {
 		System.arraycopy(recvPacket, 6, data, 0, data.length);
 		
 		int pktLen = recvPacket.length;
-		int checksumVal = (int) (((recvPacket[pktLen-4] & 0xFF) << 24) + ((recvPacket[pktLen-3] & 0xFF) << 16) +
+		
+		int checksumVal =  (((recvPacket[pktLen-4] & 0xFF)<< 24) + ((recvPacket[pktLen-3] & 0xFF) << 16 ) +
 				((recvPacket[pktLen-2] & 0xFF) << 8) + (recvPacket[pktLen-1] & 0xFF));
 		
+//		System.out.println("Calculated Check Sum Received is: " + checksumVal);
+//		System.out.println(Arrays.toString(packet));
 		checksum.update(recvPacket, 0, recvPacket.length-4);			//get the checksum for the received packet
-		
+//		System.out.println("What the Sum Should be: " + checksum.getValue());
 		if(checksumVal != checksum.getValue())							//if the checksum doesn't match up then the packet is corrupted
 			corrupted = true;
-		
-		
 	}
 	
 	/**
@@ -112,13 +117,16 @@ public class Packet {
 		
 		//CRC bytes filled
 		checksum.update(buffer, 0, bufLen - 4);			//get the checksum for everything up to the CRC bytes
-		int checksumVal = (int)checksum.getValue();			//long representation of the checksum 
 		
-		buffer[bufLen-4] = (byte) (checksumVal >>> 24);			
-		buffer[bufLen-3] = (byte) (checksumVal >>> 16);
-		buffer[bufLen-2] = (byte) (checksumVal >>> 8);
+		int checksumVal = (int)checksum.getValue();			//long representation of the checksum 
+		System.out.println("Check Sum Sent is: " + checksumVal);
+		
+		buffer[bufLen-4] = (byte) ((checksumVal ) >>> 24);				//least significant byte		
+		buffer[bufLen-3] = (byte) ((checksumVal ) >>> 16);
+		buffer[bufLen-2] = (byte) ((checksumVal ) >>> 8);
 		buffer[bufLen-1] = (byte) (checksumVal & 0xFF);							//end byte
 		
+		System.out.println(Arrays.toString(buffer));
 		return buffer;
 	}
 	

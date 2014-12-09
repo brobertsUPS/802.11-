@@ -13,7 +13,7 @@ import java.util.HashMap;
  * details on these routines.
  * @author richards
  * @author Nate Olderman
- * @author Brandon Roberts
+ * @author Brandon Roberts 
  *
  */
 public class LinkLayer implements Dot11Interface {
@@ -26,8 +26,9 @@ public class LinkLayer implements Dot11Interface {
 	
 	private HashMap<Short, Integer> sendSeqNums;				//seqNums for what we send out. key is destinationAddr, value is seqNum
 	
-	private int slotChoice;
-	
+	private int slotChoice;										//For command and status
+	private double beaconInterval;
+	private int statusCode;
 	
 	/**
 	 * Constructor takes a MAC address and the PrintWriter to which our output will
@@ -42,8 +43,8 @@ public class LinkLayer implements Dot11Interface {
 		this.output = output;
 
 		theRF = new RF(null, null);
-		senderBuf = new ArrayDeque<Packet>(); //TEMPORARILY SET TO 10
-		receiverBuf = new ArrayBlockingQueue<Packet>(10); //TEMPORARILY SET TO 10
+		senderBuf = new ArrayDeque<Packet>(4); 			//limited buffer size of 4
+		receiverBuf = new ArrayBlockingQueue<Packet>(4); 
 		sendSeqNums = new HashMap<Short, Integer>();
 		
 		long[] clockOffset = {0};//starts the clock offset at 0
@@ -52,6 +53,7 @@ public class LinkLayer implements Dot11Interface {
 		
 		sender.start();
 		receiver.start();
+		
 	}
 	
 	/**
@@ -60,10 +62,14 @@ public class LinkLayer implements Dot11Interface {
 	 */
 	public int send(short dest, byte[] data, int len) {
 		Packet packet = new Packet((short)0, getNextSeqNum(dest, sendSeqNums), dest, ourMAC, data);
-		
 		output.println("LinkLayer: Sending " + len + " bytes to " + dest);
-		senderBuf.push(packet); //have to fill senderBuf with the data from packet
-		return len;
+		
+		if(senderBuf.size() == 4)							//Hit limit on buffer size
+			return 0;
+		else{
+			senderBuf.push(packet); 						//have to fill senderBuf with the data from packet
+			return len;
+		}
 	}
 	
 	/**
@@ -97,16 +103,40 @@ public class LinkLayer implements Dot11Interface {
 	public int command(int cmd, int val) {
 		output.println("LinkLayer: Sending command "+cmd+" with value "+val);
 		if(cmd == 0){
+			output.println("-------------- Commands and Settings -----------------");
+			output.println("Cmd #0: Display command options and current settings");
+			output.println("Cmd #1: Set debug level.  Currently at 0 \n\tUse -1 for full debug output, 0 for no output");
+			output.println("Cmd #2: Set slot selection method.  Currently random \n\tUse 0 for random slot selection, any other value to use maxCW");
+			output.println("Cmd #3: Set beacon interval.  Currently at 3 seconds \n\tValue specifies seconds between the start of beacons; -1 disables");
+//			output.println("Cmd #4: Set beep interval.  Currently at 1 secondsValue is interpreted as seconds between beeps; -1 disables");
+			
+			//print slot choice and beacon interval
+			output.println("The current slot choice: "+slotChoice);
+			output.println("The current beacon interval " + beaconInterval);
 			
 		}
 		if(cmd == 1){
-			
+			//turn diagnostic on or off
+			output.println("Diagnostic turned on");
+			output.println("Diagnostic turned off");
 		}
 		if(cmd == 2){
+			output.println("Random slot window");
+			//random slot window
+				//choose randomly between 0 and max collision window allowed
 			
+			output.println("Fixed slot window");
+			//fixed
+				//choose maximum collision window allowed
 		}
 		if(cmd == 3){
-			
+			if(val == -1){
+				//stop beacons
+				output.println("Beacons have been stopped");
+			}else{
+				//beacon time is val *1000
+				output.println("Beacon time is " + val*1000);
+			}
 		}
 		return 0;
 	}

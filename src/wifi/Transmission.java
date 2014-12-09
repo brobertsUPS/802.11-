@@ -6,7 +6,7 @@ package wifi;
  * parameters to the call, along with the incoming data itself.  We can't do that in Java,
  * so we'll use the same approach that the Java sockets libraries do:  Our recv() call will
  * take an object reference &mdash; a pointer to a Transmission instance &mdash; and will
- * write the data and address information into the Transmission object.
+ * write the data and address information into the Transmission object. 
  * 
  * @author richards
  */

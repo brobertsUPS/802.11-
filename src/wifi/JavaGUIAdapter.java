@@ -9,7 +9,7 @@ import java.io.PrintWriter;
  * This class acts as a thin layer between the GUI client code and the Java-based
  * 802.11~ layer.  (There's a similar layer that mediates between the Java GUI code
  * and a C++ implementation of the 802.11~ project.)  See {@link GUIClientInterface} 
- * for full descriptions of these routines.
+ * for full descriptions of these routines. 
  * 
  * @author richards
  */
