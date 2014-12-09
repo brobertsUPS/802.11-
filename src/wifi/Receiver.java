@@ -28,6 +28,7 @@ public class Receiver implements Runnable {
 	private HashMap<Short, Short> recvSeqNums; 					//expected seqNum for stuff we get from other hosts
 	private HashMap<Short, ArrayList<Packet>> outOfOrderTable;	//packets that have a higher seqNum than we are expecting for the srcAddress
 	
+
 	/**
 	 * Makes a new Receiver object that watches the RF layer for incoming information
 	 * @param theRF the RF layer to receive from
@@ -47,96 +48,111 @@ public class Receiver implements Runnable {
 		outOfOrderTable = new HashMap<Short, ArrayList<Packet>>();
 	}
 	
+
 	/**
 	 * Begins waiting for the rf layer to receive and puts it in the receiverBuf
 	 */
 	public void run() {
 		while(true){
-			try {
-				Packet packet = new Packet(rf.receive()); 
-				
-				//if the packet is a beacon
-				if(packet.getFrameType() == 2){
-					updateClockOffset(packet);
-				}
-				//else if it's destination is our mac address
-				else if(packet.getDestAddr() == ourMac){
-					
-					if(receiverBuf.size() == 4){ break; }////ignore -----NOTE: what is this??-----
-
-					//if its an ack AND it has the same sequence number
-					if((packet.getFrameType() == 1)  &&  (packet.getSeqNum() == senderBuf.peek().getSeqNum()))
-						senderBuf.peek().setAsAcked();		//tell sender that that packet was ACKed
-					
-					//not an ack so recieve the data
-					else
-						checkSeqNums(packet);
-				}				
-			} catch (InterruptedException e) {
-				System.err.println("Receiver interrupted!");
+			Packet packet = new Packet(rf.receive()); 
+			
+			//if the packet is a beacon
+			if(packet.getFrameType() == 2){
+				updateClockOffset(packet);
 			}
+			//else if it's destination is our mac address
+			else if(packet.getDestAddr() == ourMac){
+				
+				if(receiverBuf.size() == 4){ break; }////ignore -----NOTE: what is this??-----
+
+				//if its an ack AND it has the same sequence number
+				if((packet.getFrameType() == 1)  &&  (packet.getSeqNum() == senderBuf.peek().getSeqNum()))
+					senderBuf.peek().setAsAcked();		//tell sender that that packet was ACKed
+				
+				//not an ack so recieve the data
+				else
+					checkSeqNum(packet);
+			}				
 		}
 	}
 
 
 	/*
-	* Recieves 
-	*
+	* Checks the sequence number on the packet, and does any necessary sequence number work
+	* @param packet - the packet whose sequence number it is checking
 	*/
-	private void checkSeqNums(Packet packet){
+	private void checkSeqNum(Packet packet){
 		short expectedSeqNum;
 
 		//check whether or not we have recieved from this address before
 		if(!recvSeqNums.containsKey(packet.getSrcAddr())){
 			recvSeqNums.put(packet.getSrcAddr(), (short) 0); //assuming it starts at zero
 			expectedSeqNum = 0;
-			outOfOrderTable.put(packet.getSrcAddr(), new ArrayList<Packet>(4096));
+			outOfOrderTable.put(packet.getSrcAddr(), new ArrayList<Packet>());
 		}
 		else
 			expectedSeqNum = recvSeqNums.get(packet.getSrcAddr()).shortValue(); //getting what sequence number we expect
 
-		
-		ArrayList<Packet> packets = outOfOrderTable.get(packet.getSrcAddr());//get the array for packets with higher than expected seq num
-
 		//if the sequence number is what we expect
 		if(expectedSeqNum == packet.getSeqNum()){
-			receiverBuf.put(packet); //put it in the reciever buf to be taken by the layer above
+			//put it in the reciever buf to be taken by the layer above
+			try{ receiverBuf.put(packet); } 
+			catch(InterruptedException e) { System.err.println("Receiver interrupted!");}
+
 			recvSeqNums.put(packet.getSrcAddr(), (short)(expectedSeqNum + 1)); //update the expected sequence number
 			
 			packet.makeIntoACK(); //to save time just make the same packet into an ACK
 			senderBuf.addFirst(packet); //add the (now) ACK to the senderBuf to be sent
 			
-			//check if there are packets with higher seqNums waiting in the queue now that we found the expected seqNum
-			if(!packets.isEmpty()){
-				for(Packet queuedPacket : packets){ //go through everything in the queue, and give it to the layer above until it hits a sequence number gap (missing a packet)
-					if(queuedPacket == null)//if its a gap, break out of loop
-						break;
-
-					receiverBuf.put(queuedPacket);
-					recvSeqNums.put(queuedPacket.getSrcAddr(), (short)(expectedSeqNum + 1));//update expected seqNum
-				}
-			}
+			checkOutOfOrderTable(outOfOrderTable.get(packet.getSrcAddr()));
 		}
+		
 		//if the recieved packet has a higher sequence number than what we expect
 		else if(expectedSeqNum < packet.getSeqNum()){ 
 			output.println("Detected a gap in the sequence nmbers on incoming data packets from host: " + packet.getSrcAddr());
-			//packets.add(packet.getSeqNum() - expectedSeqNum - 1, packet);  				//**********************************THIS GETS DESTROYED AND WE NEVER KEPT THE PACKET IN THE TABLE
 			outOfOrderTable.get(packet.getSrcAddr()).add(packet.getSeqNum() - expectedSeqNum - 1, packet);//adding the packet to the spot in the arraylist corresponding to the distance from the expected sequence number -1 to maintain starting at 0
 		}
 	}
 
 
+	/**
+	* Helper method that checks if there are packets with higher seqNums waiting in the queue that should be given to the layer above
+	* @param packets - the queue of packets with higher seq nums
+	*/
+	private void checkOutOfOrderTable(ArrayList<Packet> packets){
+		if(!packets.isEmpty()){
+			for(int i = 0; i < packets.size(); i++){ //go through everything in the queue
+				if(packets.get(i) == null){//if this spot is a gap
+					ArrayList<Packet> temp = new ArrayList<Packet>(packets.subList(i+1, packets.size()));
+					outOfOrderTable.put(packets.get(i).getSrcAddr(), temp); //push up the items in the arrayList
+					recvSeqNums.put(packets.get(i).getSrcAddr(), (short)i);//update expected seqNum
+					break;
+				}
+
+				try{ receiverBuf.put(packets.get(i)); }//give it to the layer above
+				catch(InterruptedException e) { System.err.println("Receiver interrupted!");}
+			}
+		}
+	}
+
+	/**
+	* Updates the offset for the clock based on the give beacon packet's time
+	* @param packet - the beacon packet that has the time to update to
+	*/
 	private void updateClockOffset(Packet packet){
-		byte[] beaconTimeArray = packet.getDataBuf();
-		long beaconTime = beaconTimeArray[beaconTimeArray.length-1];
-			
-		for(int i = beaconTimeArray.length - 2; i >= 0; i--){
-			beaconTime = beaconTime << 8;
-			beaconTime += beaconTimeArray[i];
+		//get the time in a byte array from the data buf
+		byte[] timeArray = packet.getDataBuf();
+
+		//start out the time variable when initializing, then copy the rest of it over in the loop
+		long otherHostTime = timeArray[timeArray.length-1];
+		for(int i = timeArray.length - 2; i >= 0; i--){
+			otherHostTime = otherHostTime << 8;
+			otherHostTime += timeArray[i];
 		}
 
-		long clockDifference = beaconTime - (clockOffset[0] + rf.clock());
-		if(clockDifference > 0)
+		//get the difference in the clocks
+		long clockDifference = otherHostTime - (clockOffset[0] + rf.clock());
+		if(clockDifference > 0)//if the other host is ahead of us in time, advance our time to match
 			clockOffset[0] += clockDifference;
 	}
 }
