@@ -54,14 +54,18 @@ public class Receiver implements Runnable {
 	public void run() {
 		while(true){
 			try {
-				Packet packet = new Packet(rf.receive());
-
+				Packet packet = new Packet(rf.receive()); 
+				
 				//if the packet is a beacon
 				if(packet.getFrameType() == 2){
 					updateClockOffset(packet);
 				}
 				//else if it's destination is our mac address
 				else if(packet.getDestAddr() == ourMac){
+					
+					if(receiverBuf.size() == 4){					//Hit limit on number of packets we can queue
+						break; ////ignore
+					}
 
 					if((packet.getFrameType() == 1)  &&  (packet.getSeqNum() == senderBuf.peek().getSeqNum())){//if its an ack AND it has the same sequence number
 						senderBuf.peek().setAsAcked();		//tell sender that that packet was ACKed
@@ -72,16 +76,13 @@ public class Receiver implements Runnable {
 						if(!recvSeqNums.containsKey(packet.getSrcAddr())){//if it hasn't received from this address before
 							recvSeqNums.put(packet.getSrcAddr(), (short) 0); //assuming it starts at zero
 							expectedSeqNum = 0;
-							outOfOrderTable.put(packet.getSrcAddr(), new ArrayList<Packet>());
+							outOfOrderTable.put(packet.getSrcAddr(), new ArrayList<Packet>(4096));
 						}
-						else{
-							//System.out.println("WHAT WE PUT IN EXPECTED: " +recvSeqNums.get(packet.getSrcAddr()).shortValue());
+						else
 							expectedSeqNum = recvSeqNums.get(packet.getSrcAddr()).shortValue(); //changing from when we update it below to when we check it on next loop through
-							//System.out.println("WHAT NOW HAVE FOR EXPECTED: " +expectedSeqNum);
-						}
 							
-	
-						//System.out.println("EXPECTED SEQNUM IN RECEIVER" + expectedSeqNum);
+						System.out.println("EXPECTED SEQNUM IN RECEIVER " + expectedSeqNum);
+						System.out.println("WHAT THE EZPECTED IS: " + packet.getSeqNum());
 						ArrayList<Packet> packets = outOfOrderTable.get(packet.getSrcAddr());
 						if(expectedSeqNum == packet.getSeqNum()){
 							receiverBuf.put(packet);		//if received successfully we need to put an ack in senderBuf

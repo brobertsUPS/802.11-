@@ -24,7 +24,7 @@ import java.nio.BufferOverflowException;
 /**
  * Implements the Circular Buffer producer/consumer model for bytes.
  * More information about this class is available from <a target="_top" href=
- * "http://ostermiller.org/utils/CircularByteBuffer.html">ostermiller.org</a>.
+ * "http://ostermiller.org/utils/CircularByteBuffer.html">ostermiller.org</a>. 
  * <p>
  * Using this class is a simpler alternative to using a PipedInputStream
  * and a PipedOutputStream. PipedInputStreams and PipedOutputStreams don't support the
