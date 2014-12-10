@@ -62,13 +62,13 @@ public class Receiver implements Runnable {
 			if(packet.getFrameType() == 2){
 				updateClockOffset(packet);
 			}
-			//else if it's destination is our mac address
-			else if(packet.getDestAddr() == ourMac){
+			//else if it's destination is our mac address or -1 (-1 should be accepted by everyone)
+			else if(packet.getDestAddr() == ourMac || packet.getDestAddr() == -1){
 				
 				if(receiverBuf.size() == 4){ break; }////ignore -----NOTE: what is this??-----
-
+				
 				//if its an ack AND it has the same sequence number
-				if((packet.getFrameType() == 1)  &&  (packet.getSeqNum() == senderBuf.peek().getSeqNum()))
+				if((packet.getFrameType() == 1) && (packet.getSeqNum() == senderBuf.peek().getSeqNum()))
 					senderBuf.peek().setAsAcked();		//tell sender that that packet was ACKed
 				
 				//not an ack so recieve the data

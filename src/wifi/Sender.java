@@ -13,6 +13,7 @@ import rf.RF;
  */
 public class Sender implements Runnable{
 	private static final int DIFS = RF.aSIFSTime + (2 * RF.aSlotTime);
+	private static final int ACK_TIMEOUT_VALUE = RF.aSIFSTime + RF.aSlotTime + 2129;//after 10 tests we averaged 2129 ms
 
 	//IEEE spec says beacon interval should be 102,400 microseconds, this is in milliseconds
 	private static final double BEACON_INTERVAL = 102.4; 
@@ -47,6 +48,7 @@ public class Sender implements Runnable{
 		currentPacket = null;
 	}
 	
+
 	/**
 	 * Waits to see if RF channel is idle, and sends when it has information
 	 */
@@ -54,6 +56,7 @@ public class Sender implements Runnable{
 		while(true)
 			waitForFrame();
 	}
+
 
 	/**
 	 * Waits for frame to become available
@@ -70,7 +73,7 @@ public class Sender implements Runnable{
 				senderBuf.remove(currentPacket);					// pull the ack message off that we want to send
 			}else{													// else this is not an ACK
 				if(!rf.inUse())
-					waitIFS();
+					waitDIFS();
 				else
 					waitForIdleChannel();
 			}
@@ -84,14 +87,15 @@ public class Sender implements Runnable{
 		}
 	}
 
+
 	/**
 	 * Does an extended IFS wait because the channel was not initially idle
 	 */
 	private void backOffWaitIFS(){
-		try {						//do initial DIFS
-			Thread.sleep(DIFS);
+		try {
+			Thread.sleep(roundedUpDIFS());
 		} catch (InterruptedException e) {
-			System.err.println("Failed waiting IFS");
+			System.err.println("Failed waiting DIFS");
 		}
 
 		if(backOffCount !=0){								//do a backoff if we havent counted down to 0
@@ -108,14 +112,15 @@ public class Sender implements Runnable{
 		}
 	}
 
+
 	/**
 	 * Waits a slot time
 	 */
 	private void waitSlotTime(){
 		try {
-			Thread.sleep(RF.aSlotTime);						//do one slot time wait
+			Thread.sleep(RF.aSlotTime);
 		} catch (InterruptedException e) {
-			System.err.println("Failed waiting IFS");
+			System.err.println("Failed waiting slot time");
 		}
 		if(rf.inUse())										//channel is used and we can't continue doing our slot time wait
 			waitForIdleChannel();
@@ -131,15 +136,16 @@ public class Sender implements Runnable{
 		}
 	}
 
+
 	/**
 	 * Waits the IFS time 
 	 */
-	private void waitIFS(){
+	private void waitDIFS(){
 		
 		try {
-			Thread.sleep(DIFS);
+			Thread.sleep(roundedUpDIFS());
 		} catch (InterruptedException e) {
-			System.err.println("Failed waiting IFS");
+			System.err.println("Failed waiting DIFS");
 		}
 		if(!rf.inUse()){								//still not in use and we are good to send
 			rf.transmit(currentPacket.toBytes());
@@ -149,6 +155,7 @@ public class Sender implements Runnable{
 		}
 	}
 	
+
 	/**
 	 * Waits for the SIFS time
 	 */
@@ -156,12 +163,13 @@ public class Sender implements Runnable{
 		try {
 			Thread.sleep(RF.aSIFSTime);
 		} catch (InterruptedException e) {
-			System.err.println("Failed waiting IFS");
+			System.err.println("Failed waiting SIFS");
 		}
 		if(rf.inUse())
 			waitForIdleChannelToACK();
 	}
 	
+
 	/**
 	 * Waits until the channel is available then waits SIFS
 	 */
@@ -176,11 +184,12 @@ public class Sender implements Runnable{
 		waitSIFS();
 	}
 
+
 	/**
 	 * Wait
 	 * @throws InterruptedException 
 	 */
-	private void waitForAck(){										//Get here from wait IFS
+	private void waitForAck(){
 		long startTime = rf.clock();
 
 		while(!senderBuf.isEmpty()){								//make sure there is something on the buffer (could have pulled off in a previous iteration of the while)
@@ -190,9 +199,6 @@ public class Sender implements Runnable{
 				break;
 			}
 			else if(currentPacket.isAcked()){
-				long timeoutVal = rf.clock() - startTime;
-				
-				System.out.println("The Packet has been acked");
 				senderBuf.remove(currentPacket);					//since it is acked we pull it off
 				windowSize = 1; 									//resetting window size
 				break;
@@ -204,8 +210,8 @@ public class Sender implements Runnable{
 				break;
 			}
 
-			if(rf.clock() - startTime >= 10000)	 					//if it has taken longer than a ten seconds, so timeout and retransmit
-				timeOut();
+			if(rf.clock() - startTime >= ACK_TIMEOUT_VALUE)	 		//if it has taken longer than a ten seconds, so timeout and retransmit
+				timedOut();
 			else{													//else not timed out yet
 				try {
 					Thread.sleep(10);
@@ -216,10 +222,11 @@ public class Sender implements Runnable{
 		}
 	}
 
+
 	/**
 	* Helper method that deals with the occassion where it timed out while waiting for an ack
 	*/
-	private void timeOut(){
+	private void timedOut(){
 		System.out.println("SENDER got to timeout and now trying to retransmit");
 		windowSize *=2; 										//double window size
 		backOffCount = (int) (Math.random()*(windowSize + 1));  //give the option to roll a zero
@@ -232,6 +239,7 @@ public class Sender implements Runnable{
 		else 
 			backOffWaitIFS();
 	}
+
 
 	/**
 	 * Returns when the channel becomes idle
@@ -246,6 +254,15 @@ public class Sender implements Runnable{
 		}
 		backOffWaitIFS();//channel is idle so we start doing our backoff
 	}
+
+	/**
+	* Rounds up current time to the nearest 50ms boundary and adds to DIFS to get time to wait
+	* @return rounded up DIFS wait time
+	*/
+	private long roundedUpDIFS(){
+		return DIFS + (50 - rf.clock()%50);
+	}
+
 
 	/**
 	* Checks if the beacon should be sent

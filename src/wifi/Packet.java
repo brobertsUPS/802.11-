@@ -85,10 +85,12 @@ public class Packet {
 				((recvPacket[pktLen-2] & 0xFF) << 8) + (recvPacket[pktLen-1] & 0xFF));
 		
 		//calculate the actual checksum from what we recieved
+		checksum.reset();
 		checksum.update(recvPacket, 0, recvPacket.length-4);
+		int newChecksum = (int)(checksum.getValue() & 0xFFFFFFFF);
 
 		//check if there is a difference in the checksums to see if it is corrupted
-		if(checksumVal != checksum.getValue())
+		if(checksumVal != newChecksum)
 			corrupted = true;
 	}
 	
@@ -120,17 +122,17 @@ public class Packet {
 			buffer[bufferPos++] = data[i];
 		
 		//CRC bytes filled
+		checksum.reset();
 		checksum.update(buffer, 0, bufLen - 4);		//get the checksum for everything up to the CRC bytes
 		
 		int checksumVal = (int)(checksum.getValue() & 0xFFFFFFFF);		//long representation of the checksum 
-		System.out.println("Check Sum Sent is: " + checksumVal);
-		
-		buffer[bufLen-4] = (byte) ((checksumVal ) >>> 24);		//least significant byte		
-		buffer[bufLen-3] = (byte) ((checksumVal ) >>> 16);
-		buffer[bufLen-2] = (byte) ((checksumVal ) >>> 8);
+
+		buffer[bufLen-4] = (byte) (checksumVal >>> 24);			//least significant byte		
+		buffer[bufLen-3] = (byte) (checksumVal >>> 16);
+		buffer[bufLen-2] = (byte) (checksumVal >>> 8);
 		buffer[bufLen-1] = (byte) (checksumVal & 0xFF);			//end byte
 		
-		System.out.println(Arrays.toString(buffer));
+
 		return buffer;
 	}
 	
@@ -209,7 +211,7 @@ public class Packet {
 	* Gets whether or not the packet was corrupted
 	* @return true if the packet was corrupted
 	*/
-	public boolean isCorrupt(){
+	public boolean checkIfCorrupt(){
 		return corrupted;
 	}
 
