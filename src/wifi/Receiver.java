@@ -68,7 +68,7 @@ public class Receiver implements Runnable {
 				if(receiverBuf.size() == 4){ break; }////ignore -----NOTE: what is this??-----
 				
 				//if its an ack AND it has the same sequence number
-				if((packet.getFrameType() == 1) && (packet.getSeqNum() == senderBuf.peek().getSeqNum()))
+				if((packet.getFrameType() == 1) && !packet.checkIfCorrupt() && (packet.getSeqNum() == senderBuf.peek().getSeqNum()))
 					senderBuf.peek().setAsAcked();		//tell sender that that packet was ACKed
 				
 				//not an ack so recieve the data
@@ -105,11 +105,10 @@ public class Receiver implements Runnable {
 			}
 
 			recvSeqNums.put(packet.getSrcAddr(), (short)(expectedSeqNum + 1)); //update the expected sequence number
+		
+			senderBuf.addFirst(new Packet((short)1, packet.getSeqNum(), packet.getSrcAddr(), packet.getDestAddr(), new byte[1])); //make and add ACK to the senderBuf to be sent
 			
-			packet.makeIntoACK(); //to save time just make the same packet into an ACK
-			senderBuf.addFirst(packet); //add the (now) ACK to the senderBuf to be sent
-			
-			checkOutOfOrderTable(outOfOrderTable.get(packet.getDestAddr()));//dest because we flipped the src and dest in packet when making it an ACK
+			checkOutOfOrderTable(outOfOrderTable.get(packet.getSrcAddr())); //checks to see if there are other packets that had higher sequence numbers
 		}
 		
 		//if the recieved packet has a higher sequence number than what we expect

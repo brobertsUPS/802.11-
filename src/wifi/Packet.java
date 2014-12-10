@@ -244,18 +244,6 @@ public class Packet {
 	public void setAsAcked(){
 		isACKed = true;
 	}
-
-	/**
-	 * Changes this packet to an ACK
-	 */
-	public void makeIntoACK() {
-		frameType = 1;//make it an ACK type
-		
-		//flip the destination and source
-		short temp = destAddr;
-		destAddr = srcAddr;
-		srcAddr = temp;
-	}
 	
 	/**
 	 * Sets the sequence number of this packet
