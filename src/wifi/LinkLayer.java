@@ -49,7 +49,7 @@ public class LinkLayer implements Dot11Interface {
 		
 		long[] clockOffset = {0};//starts the clock offset at 0
 		Thread sender = new Thread(new Sender(theRF, senderBuf, ourMAC, clockOffset));
-		Thread receiver = new Thread(new Receiver(theRF, senderBuf, receiverBuf, ourMAC, output, clockOffset));
+		Thread receiver = new Thread(new Receiver(theRF, senderBuf, receiverBuf, ourMAC, clockOffset, output));
 		
 		sender.start();
 		receiver.start();

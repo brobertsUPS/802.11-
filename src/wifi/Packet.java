@@ -81,7 +81,7 @@ public class Packet {
 		//-------CHECKSUM WORK ------//
 		//get the checksum according to the other host
 		int pktLen = recvPacket.length;
-		int checksumVal =  (((recvPacket[pktLen-4] & 0xFF)<< 24) + ((recvPacket[pktLen-3] & 0xFF) << 16 ) +
+		int checksumVal =  (((recvPacket[pktLen-4] & 0xFF) << 24) + ((recvPacket[pktLen-3] & 0xFF) << 16 ) +
 				((recvPacket[pktLen-2] & 0xFF) << 8) + (recvPacket[pktLen-1] & 0xFF));
 		
 		//calculate the actual checksum from what we recieved

@@ -34,9 +34,11 @@ public class Receiver implements Runnable {
 	 * @param theRF the RF layer to receive from
 	 * @param senderBuffer the queue of packets needing to be sent (use in Reciever to confirm ACK)
 	 * @param receiverBuffer the que of received packets
+	 * @param theMac our MAC address
 	 * @param currentClockOffset the offset from the time in rf.clock(), it is an array to be used as a pointer and shared with the sender
+	 * @param outputWriter the output to write to
 	 */
-	public Receiver(RF theRF, ArrayDeque<Packet> senderBuffer, ArrayBlockingQueue<Packet> receiverBuffer, short theMac, PrintWriter outputWriter, long[] currentClockOffset){
+	public Receiver(RF theRF, ArrayDeque<Packet> senderBuffer, ArrayBlockingQueue<Packet> receiverBuffer, short theMac, long[] currentClockOffset, PrintWriter outputWriter){
 		rf = theRF;
 		senderBuf = senderBuffer;
 		receiverBuf = receiverBuffer;
@@ -77,7 +79,7 @@ public class Receiver implements Runnable {
 	}
 
 
-	/*
+	/**
 	* Checks the sequence number on the packet, and does any necessary sequence number work
 	* @param packet - the packet whose sequence number it is checking
 	*/
