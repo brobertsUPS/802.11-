@@ -179,47 +179,43 @@ public class Sender implements Runnable{
 		long startTime = rf.clock();
 
 		while(!senderBuf.isEmpty()){								//make sure there is something on the buffer (could have pulled off in a previous iteration of the while)
-			
+			Packet topPacket = senderBuf.peek();
+
 			//if it was a beacon, don't wait for an ack
-			if(senderBuf.peek().getFrameType() == 2){
-				senderBuf.pop();
+			if(topPacket.getFrameType() == 2){
+				senderBuf.remove(topPacket);
 				break;
 			}
-			else if(senderBuf.peek().isAcked()){
+			else if(topPacket.isAcked()){
 				long timeoutVal = rf.clock() - startTime;
 				
 				System.out.println("The Packet has been acked");
-				senderBuf.pop(); 									//since it is acked we pull it off
+				senderBuf.remove(topPacket);								//since it is acked we pull it off
 				windowSize = 1; 									//resetting window size
 				break;
 			}
 
-//			System.out.println(senderBuf.peek().retry()  + " " + RF.dot11RetryLimit);
-			if(senderBuf.peek().retry()  >= RF.dot11RetryLimit){  //hit retry limit and it breaks so that it will pull it off the buffer								
+			if(topPacket.getNumRetryAttempts()  >= RF.dot11RetryLimit){  //hit retry limit and it breaks so that it will pull it off the buffer								
 				System.out.println("Hit retry LIMIT");
-				senderBuf.pop();
+				senderBuf.remove(topPacket);
 				break;
 			}
-			
-			try{
-				Thread.sleep((long)10000);
-			}
-			catch(Exception e){
-				
-			}
-			
+
 			if(rf.clock() - startTime >= 10000){ 	 					//if it has taken longer than a ten seconds, so timeout and retransmit
 				System.out.println("SENDER got to timeout and now trying to retransmit");
 				windowSize *=2; 										//double window size
 				backOffCount = (int) (Math.random()*(windowSize + 1));  //give the option to roll a zero
 
+				topPacket.retry();//increment the retry attempt counter in the packet
+
+				//try to resend
 				if(rf.inUse())
 					waitForIdleChannel();
 				else 
 					backOffWaitIFS();
 			} else{
 				try {
-					Thread.sleep(5);
+					Thread.sleep(10);
 				} catch (InterruptedException e) {
 					System.err.println("Failed waiting for ACK");
 				}

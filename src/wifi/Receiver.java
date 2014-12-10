@@ -25,8 +25,8 @@ public class Receiver implements Runnable {
 	private ArrayDeque<Packet> senderBuf;
 	private ArrayBlockingQueue<Packet> receiverBuf;
 	
-	private HashMap<Short, Short> recvSeqNums; 					//expected seqNum for stuff we get from other hosts
-	private HashMap<Short, ArrayList<Packet>> outOfOrderTable;	//packets that have a higher seqNum than we are expecting for the srcAddress
+	private HashMap<Short, Short> recvSeqNums; //expected seqNum for stuff we get from other hosts
+	private HashMap<Short, ArrayList<Packet>> outOfOrderTable; //packets that have a higher seqNum than we are expecting for the srcAddress
 	
 
 	/**
@@ -104,7 +104,7 @@ public class Receiver implements Runnable {
 			packet.makeIntoACK(); //to save time just make the same packet into an ACK
 			senderBuf.addFirst(packet); //add the (now) ACK to the senderBuf to be sent
 			
-			checkOutOfOrderTable(outOfOrderTable.get(packet.getSrcAddr()));
+			checkOutOfOrderTable(outOfOrderTable.get(packet.getDestAddr()));//dest because we flipped the src and dest in packet when making it an ACK
 		}
 		
 		//if the recieved packet has a higher sequence number than what we expect

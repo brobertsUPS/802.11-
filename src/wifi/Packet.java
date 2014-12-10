@@ -63,7 +63,7 @@ public class Packet {
 		frameType = (short) ((recvPacket[0] & 0xF0) >> 4);//get out the FrameType and the Retry bit in one number
 		retry = (short) (frameType % 2);//if it is odd, then the retry bit (that was the least significant bit in this 4 bit number) was 1
 		frameType >>= 1;//shift over to get rid of retry bit
-		seqNum = (short) (((recvPacket[0] & 0xFF) << 8 ) + (recvPacket[1] & 0xFFF));//pull out sequence number//pull out sequence number ************Getting wrong value right now
+		seqNum = (short) (((recvPacket[0] & 0xF) << 8 ) + (recvPacket[1] & 0xFFF));//pull out sequence number//pull out sequence number ************Getting wrong value right now
 		//(short) ((short)((recvPacket[0] << 8 ) + recvPacket[1]) & 0xFFF); //old code to pull out sequence number
 //		System.out.println("SEQNUM IN PACKET " + seqNum);
 		//destination bytes 
@@ -81,7 +81,7 @@ public class Packet {
 		int checksumVal =  (((recvPacket[pktLen-4] & 0xFF)<< 24) + ((recvPacket[pktLen-3] & 0xFF) << 16 ) +
 				((recvPacket[pktLen-2] & 0xFF) << 8) + (recvPacket[pktLen-1] & 0xFF));
 		
-//		System.out.println("Calculated Check Sum Received is: " + checksumVal);
+		System.out.println("Calculated Check Sum Received is: " + checksumVal);
 //		System.out.println(Arrays.toString(packet));
 		checksum.update(recvPacket, 0, recvPacket.length-4);			//get the checksum for the received packet
 //		System.out.println("What the Sum Should be: " + checksum.getValue());
@@ -119,7 +119,7 @@ public class Packet {
 		//CRC bytes filled
 		checksum.update(buffer, 0, bufLen - 4);			//get the checksum for everything up to the CRC bytes
 		
-		int checksumVal = (int)checksum.getValue();			//long representation of the checksum 
+		int checksumVal = (int)(checksum.getValue() & 0xFFFFFFFF);			//long representation of the checksum 
 		System.out.println("Check Sum Sent is: " + checksumVal);
 		
 		buffer[bufLen-4] = (byte) ((checksumVal ) >>> 24);				//least significant byte		
@@ -235,5 +235,12 @@ public class Packet {
 	*/
 	public boolean isCorrupt(){
 		return corrupted;
+	}
+
+	/**
+	* 
+	*/
+	public int getNumRetryAttempts(){
+		return retryAttempts;
 	}
 }
