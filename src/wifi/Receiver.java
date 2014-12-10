@@ -96,8 +96,11 @@ public class Receiver implements Runnable {
 		//if the sequence number is what we expect
 		if(expectedSeqNum == packet.getSeqNum()){
 			//put it in the reciever buf to be taken by the layer above
-			try{ receiverBuf.put(packet); } 
-			catch(InterruptedException e) { System.err.println("Receiver interrupted!");}
+			try{ 
+				receiverBuf.put(packet);
+			} catch(InterruptedException e){
+				System.err.println("Receiver interrupted!");
+			}
 
 			recvSeqNums.put(packet.getSrcAddr(), (short)(expectedSeqNum + 1)); //update the expected sequence number
 			
@@ -129,8 +132,12 @@ public class Receiver implements Runnable {
 					break;
 				}
 
-				try{ receiverBuf.put(packets.get(i)); }//give it to the layer above
-				catch(InterruptedException e) { System.err.println("Receiver interrupted!");}
+				//give it to the layer above
+				try{ 
+					receiverBuf.put(packets.get(i));
+				} catch(InterruptedException e){
+					System.err.println("Receiver interrupted!");
+				}
 			}
 		}
 	}
