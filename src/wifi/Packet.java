@@ -60,12 +60,13 @@ public class Packet {
 		packet = recvPacket;
 
 		//build individual pieces of control
-		frameType = (short) ((recvPacket[0] & 0xF0) >> 4);//get out the FrameType and the Retry bit in one number
-		retry = (short) (frameType % 2);//if it is odd, then the retry bit (that was the least significant bit in this 4 bit number) was 1
-		frameType >>= 1;//shift over to get rid of retry bit
-		seqNum = (short) (((recvPacket[0] & 0xF) << 8 ) + (recvPacket[1] & 0xFFF));//pull out sequence number//pull out sequence number ************Getting wrong value right now
-		//(short) ((short)((recvPacket[0] << 8 ) + recvPacket[1]) & 0xFFF); //old code to pull out sequence number
-//		System.out.println("SEQNUM IN PACKET " + seqNum);
+		frameType = (short) ((recvPacket[0] & 0xF0) >> 4);		//get out the FrameType and the Retry bit in one number
+		retry = (short) (frameType % 2);						//if it is odd, then the retry bit (that was the least significant bit in this 4 bit number) was 1
+		frameType >>= 1;										//shift over to get rid of retry bit
+		
+		//sequence number
+		seqNum = (short) (((recvPacket[0] & 0xF) << 8 ) + (recvPacket[1] & 0xFFF)); //pull out sequence number//pull out sequence number ************Getting wrong value right now
+
 		//destination bytes 
 		destAddr = (short) (((recvPacket[2] & 0xFF) << 8) + (recvPacket[3] & 0xFF));
 		
@@ -76,16 +77,18 @@ public class Packet {
 		data = new byte[recvPacket.length - 10]; //10 is always the number of bytes in the packet besides the data
 		System.arraycopy(recvPacket, 6, data, 0, data.length);
 		
+
+		//-------CHECKSUM WORK ------//
+		//get the checksum according to the other host
 		int pktLen = recvPacket.length;
-		
 		int checksumVal =  (((recvPacket[pktLen-4] & 0xFF)<< 24) + ((recvPacket[pktLen-3] & 0xFF) << 16 ) +
 				((recvPacket[pktLen-2] & 0xFF) << 8) + (recvPacket[pktLen-1] & 0xFF));
 		
-		System.out.println("Calculated Check Sum Received is: " + checksumVal);
-//		System.out.println(Arrays.toString(packet));
-		checksum.update(recvPacket, 0, recvPacket.length-4);			//get the checksum for the received packet
-//		System.out.println("What the Sum Should be: " + checksum.getValue());
-		if(checksumVal != checksum.getValue())							//if the checksum doesn't match up then the packet is corrupted
+		//calculate the actual checksum from what we recieved
+		checksum.update(recvPacket, 0, recvPacket.length-4);
+
+		//check if there is a difference in the checksums to see if it is corrupted
+		if(checksumVal != checksum.getValue())
 			corrupted = true;
 	}
 	
@@ -117,41 +120,36 @@ public class Packet {
 			buffer[bufferPos++] = data[i];
 		
 		//CRC bytes filled
-		checksum.update(buffer, 0, bufLen - 4);			//get the checksum for everything up to the CRC bytes
+		checksum.update(buffer, 0, bufLen - 4);		//get the checksum for everything up to the CRC bytes
 		
-		int checksumVal = (int)(checksum.getValue() & 0xFFFFFFFF);			//long representation of the checksum 
+		int checksumVal = (int)(checksum.getValue() & 0xFFFFFFFF);		//long representation of the checksum 
 		System.out.println("Check Sum Sent is: " + checksumVal);
 		
-		buffer[bufLen-4] = (byte) ((checksumVal ) >>> 24);				//least significant byte		
+		buffer[bufLen-4] = (byte) ((checksumVal ) >>> 24);		//least significant byte		
 		buffer[bufLen-3] = (byte) ((checksumVal ) >>> 16);
 		buffer[bufLen-2] = (byte) ((checksumVal ) >>> 8);
-		buffer[bufLen-1] = (byte) (checksumVal & 0xFF);							//end byte
+		buffer[bufLen-1] = (byte) (checksumVal & 0xFF);			//end byte
 		
 		System.out.println(Arrays.toString(buffer));
 		return buffer;
 	}
 	
-	/**
-	 * Sets the retry bit and returns the number of times this packet has been retransmitted
-	 */
-	public int retry(){
-		retry = 1;
-		return retryAttempts++;
-	}
-	
 	
 	/**
 	 * String representation of the Packet
+	 * @return a string representation of this packet
 	 */
 	public String toString(){
-		return ("FrameType " + frameType + " Retry " + retry + " Sequence Number " + seqNum + " | " + destAddr + " | " + srcAddr + " | " + data);
+		return ("FrameType: " + frameType + " | Retry: " + retry + " | Sequence Number: " + seqNum + " | Destination Address: " + destAddr + " | Source Address: " + srcAddr + " | Data: " + data);
 	}
 	
-	//---------------------------------------------------------------------------------------------------//
-	//---------------------------------------- Getters & Setters ----------------------------------------//
-	//---------------------------------------------------------------------------------------------------//
+
+//---------------------------------------------------------------------------------------------------//
+//---------------------------------------- Getters --------------------------------------------------//
+//---------------------------------------------------------------------------------------------------//
+	
 	/**
-	 * Gives the data message back in byte form.
+	 * Gets the data message back in byte form.
 	 * @return the data as a byte array
 	 */
 	public byte[] getDataBuf(){
@@ -159,7 +157,7 @@ public class Packet {
 	}
 	
 	/**
-	 * Returns the ENTIRE packet's data
+	 * Gets the ENTIRE packet in bytes
 	 * @return the entire packet's data
 	 */
 	public byte[] getPacket(){
@@ -167,7 +165,7 @@ public class Packet {
 	}
 	
 	/**
-	 * Gives the source address back in byte form.
+	 * Gets the source address for this packet
 	 * @return the srcAddr as a short
 	 */
 	public short getSrcAddr(){
@@ -175,7 +173,7 @@ public class Packet {
 	}
 	
 	/**
-	 * Gives the destination address back in byte form.
+	 * Gets the destination address for this packet
 	 * @return the destAdr as a short
 	 */
 	public short getDestAddr(){
@@ -183,14 +181,60 @@ public class Packet {
 	}
 	
 	/**
-	 * Determines if the Packet has been ACKed by the other host
+	 * Gets if the Packet has been ACKed by the other host
 	 * Sender checks so that it can remove the packet from the QUEUE
 	 * @return true if this packet has been ACKed
 	 */
 	public boolean isAcked() {
 		return isACKed;
 	}
+
+	/**
+	 * Gets the type of packet this is
+	 * @return 0 if Data, 1 if ACK, 2 if Beacon, 4 if CTS, 5 if RTS
+	 */
+	public short getFrameType(){
+		return frameType;
+	}
+
+	/**
+	* Gets the sequence number of the packet
+	* @return the sequence number of the packet
+	*/
+	public short getSeqNum(){
+		return seqNum;
+	}
+
+	/**
+	* Gets whether or not the packet was corrupted
+	* @return true if the packet was corrupted
+	*/
+	public boolean isCorrupt(){
+		return corrupted;
+	}
+
+	/**
+	* Gets the number of sending retry attempts this packet has done
+	* @return the number of retry attempts
+	*/
+	public int getNumRetryAttempts(){
+		return retryAttempts;
+	}
 	
+
+//---------------------------------------------------------------------------------------------------//
+//---------------------------------------- Setters --------------------------------------------------//
+//---------------------------------------------------------------------------------------------------//
+
+
+	/**
+	 * Sets the retry bit and increments the number of times this packet has been resent
+	 */
+	public void retry(){
+		retry = 1;
+		retryAttempts++;
+	}
+
 	/**
 	 * Sets this packet as being ACKed by the other host
 	 * Receiver sets this packet as being ACKed once it receives the ACK for this packet
@@ -198,17 +242,9 @@ public class Packet {
 	public void setAsAcked(){
 		isACKed = true;
 	}
-	
+
 	/**
-	 * Gives back the type of the frame
-	 * @return 0 if Data, 1 if ACK, 2 if Beacon, 4 if CTS, 5 if RTS
-	 */
-	public short getFrameType(){
-		return frameType;
-	}
-	
-	/**
-	 * Changes the packet to an ACK
+	 * Changes this packet to an ACK
 	 */
 	public void makeIntoACK() {
 		frameType = 1;//make it an ACK type
@@ -219,28 +255,12 @@ public class Packet {
 		srcAddr = temp;
 	}
 	
-	public short getSeqNum(){
-		return seqNum;
-	}
-	
 	/**
-	 * Set seqNum
+	 * Sets the sequence number of this packet
+	 * @param sequenceNum - the sequence number to set this packet to
 	 */
 	public void setSeqNum(short sequenceNum){
 		seqNum = sequenceNum;
 	}
 
-	/**
-	* Gets whether or not the packet was corrupted
-	*/
-	public boolean isCorrupt(){
-		return corrupted;
-	}
-
-	/**
-	* 
-	*/
-	public int getNumRetryAttempts(){
-		return retryAttempts;
-	}
 }
