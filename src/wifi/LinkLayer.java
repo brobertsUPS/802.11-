@@ -60,7 +60,13 @@ public class LinkLayer implements Dot11Interface {
 	 * of bytes to send. See docs for full description.
 	 */
 	public int send(short dest, byte[] data, int len) {
+		
 		Packet packet = new Packet((short)0, getNextSeqNum(dest, sendSeqNums), dest, ourMAC, data);
+		if(localClock.getDebugOn()){
+			output.println("Attepmting to send packet: " + packet.toString() + " At Time: " + (localClock.getLocalTime()));
+			
+		}
+		
 		output.println("LinkLayer: Sending " + len + " bytes to " + dest);
 		
 		if(senderBuf.size() == 4)	//Hit limit on buffer size
@@ -81,6 +87,9 @@ public class LinkLayer implements Dot11Interface {
 		Packet packet;
 		try{
 			packet = receiverBuf.take();//receive the packet
+			if(localClock.getDebugOn()){
+				output.println("Received packet: " + packet.toString() + " At Time: " +  (localClock.getLocalTime()));
+			}
 			return prepareForLayerAbove(t, packet);
 		} catch(InterruptedException e){
 			System.err.println("Receiver interrupted!");
@@ -92,7 +101,14 @@ public class LinkLayer implements Dot11Interface {
 	 * Returns a current status code. See docs for full description.
 	 */
 	public int status() {
+		
 		output.println("LinkLayer: Faking a status() return value of 0");
+		
+		if(localClock.getDebugOn()){
+			output.println("Status updated to: " + statusCode);
+			
+		}
+		
 		return 0;
 	}
 	
@@ -101,6 +117,7 @@ public class LinkLayer implements Dot11Interface {
 	 */
 	public int command(int cmd, int val) {
 		output.println("LinkLayer: Sending command " + cmd + " with value " + val);
+		
 		if(cmd == 0){
 			output.println("-------------- Commands and Settings -----------------");
 			output.println("Cmd #0: Display command options and current settings");
@@ -108,35 +125,38 @@ public class LinkLayer implements Dot11Interface {
 			output.println("Cmd #2: Set slot selection method.  Currently random \n\tUse 0 for random slot selection, any other value to use maxCW");
 			output.println("Cmd #3: Set beacon interval.  Currently at 3 seconds \n\tValue specifies seconds between the start of beacons; -1 disables");
 			//output.println("Cmd #4: Set beep interval.  Currently at 1 secondsValue is interpreted as seconds between beeps; -1 disables");
-			
+
 			//print slot choice and beacon interval
-			output.println("The current slot choice: " + localClock.getSlotSelectionFixed());
+			output.println("The current slot choice is fixed: " + localClock.getSlotSelectionFixed());
 			output.println("The current beacon interval: " + localClock.getBeaconInterval());
 
 			return 0;
 		}
-		else if(cmd == 1){
-			//turn diagnostic on or off
-			output.println("Diagnostic turned on");
-			output.println("Diagnostic turned off");
-		}
-		else if(cmd == 2){
-			output.println("Random slot window");
-			//random slot window
-				//choose randomly between 0 and max collision window allowed
-			
-			output.println("Fixed slot window");
-			//fixed
-				//choose maximum collision window allowed
-		}
-		else if(cmd == 3){
-			if(val == -1){
-				//stop beacons
-				output.println("Beacons have been stopped");
+		else if(cmd == 1){	//turn diagnostic on or off
+			localClock.setDebug(val);
+			if(val == 0){
+				output.println("Diagnostic turned off");
 			}else{
-				//beacon time is val *1000
-				output.println("Beacon time is " + val*1000);
+				output.println("Diagnostic turned on");	
+				output.println("The current slot choice is fixed: " + localClock.getSlotSelectionFixed() + 
+								"\n\t The current beacon interval: " + localClock.getBeaconInterval() + 
+								"\n\t  Beacons are turned on: " + localClock.getBeaconsOn());
 			}
+		}
+		else if(cmd == 2){	//Set slot selection to fixed or random
+			localClock.setSlotSelectionFixed(val);
+			//random slot window
+			if(val == 0)
+				output.println("Random slot window");
+			else
+				output.println("Fixed slot window");
+		}
+		else if(cmd == 3){	//turn beacon off or set it to a specified number of seconds
+			localClock.setBeaconInterval(val);
+			if(val == -1)
+				output.println("Beacons have been stopped");
+			else
+				output.println("Beacons have been set to " + val + " seconds");
 		}
 		return 0;
 	}
