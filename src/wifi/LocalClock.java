@@ -8,6 +8,7 @@ import rf.RF;
  * @author Brandon Roberts
  */
 public class LocalClock{
+	
 	private static final int DIFS = RF.aSIFSTime + (2 * RF.aSlotTime);
 	private static final int ACK_TIMEOUT_VALUE = RF.aSlotTime + 2129; //after 10 tests we averaged 2129 ms
 
@@ -22,6 +23,8 @@ public class LocalClock{
 	private boolean slotSelectionFixed; //true if the slot selection is fixed
 
 	private long startACKWait;
+	
+	private boolean debugOn;
 
 
 	/**
@@ -30,12 +33,13 @@ public class LocalClock{
 	*/
 	public LocalClock(RF theRF){
 		rf = theRF;
-
+		
 		clockOffset = 0;
 		beaconInterval = 3000; //default should be 3 seconds
 		lastBeaconTime = 0;
 		slotSelectionFixed = false; //defaults to random slot selection
 		beaconsOn = true;
+		debugOn = false;
 	}
 
 
@@ -129,8 +133,30 @@ public class LocalClock{
 	public synchronized double getBeaconInterval(){
 		return beaconInterval;
 	}
+	
+	/**
+	 * Determines if beacons are turned on
+	 * @return true if beacons are on
+	 */
+	public synchronized boolean getBeaconsOn(){
+		return beaconsOn;
+	}
+	
+	/**
+	 * Determines if debug is turned on
+	 * @return  true if debus is on
+	 */
+	public synchronized boolean getDebugOn(){
+		return debugOn;
+	}
 
-
+	/**
+	 * Returns the current clock offset
+	 * @return the clock offset
+	 */
+	public long getLocalTime(){
+		return clockOffset + rf.clock();
+	}
 
 //---------------------------------------------------------------------------------------------------//
 //---------------------------------------- Setters --------------------------------------------------//
@@ -156,6 +182,13 @@ public class LocalClock{
 			beaconsOn = false;
 		else
 			beaconInterval = theBeaconInterval;
+	}
+	
+	public synchronized void setDebug(int debug){
+		if(debug ==0)
+			debugOn = false;
+		else
+			debugOn = true;
 	}
 
 }

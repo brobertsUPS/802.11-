@@ -180,7 +180,7 @@ public class Sender implements Runnable{
 	 */
 	private void waitForACK(){
 		//if it was a beacon, don't wait for an ack
-		if(currentPacket.getFrameType() == 2)
+		if(currentPacket.getDestAddr() == -1 || currentPacket.getFrameType() == 2)
 			senderBuf.remove(currentPacket);
 			
 		else if(currentPacket.isAcked()){
