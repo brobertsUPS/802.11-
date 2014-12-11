@@ -99,7 +99,7 @@ public class Packet {
 	 * FOR SENDING ONLY
 	 * @return the byte array representing the frame to transmit
 	 */
-	public byte[] toBytes(){
+	public synchronized byte[] toBytes(){
 		byte[] buffer = new byte[data.length + 10];
 		int bufLen = buffer.length;
 
@@ -141,7 +141,7 @@ public class Packet {
 	 * String representation of the Packet
 	 * @return a string representation of this packet
 	 */
-	public String toString(){
+	public synchronized String toString(){
 		return ("FrameType: " + frameType + " | Retry: " + retry + " | Sequence Number: " + seqNum + " | Destination Address: " + destAddr + " | Source Address: " + srcAddr + " | Data: " + data);
 	}
 	
@@ -154,7 +154,7 @@ public class Packet {
 	 * Gets the data message back in byte form.
 	 * @return the data as a byte array
 	 */
-	public byte[] getDataBuf(){
+	public synchronized byte[] getDataBuf(){
 		return data;
 	}
 	
@@ -162,7 +162,7 @@ public class Packet {
 	 * Gets the ENTIRE packet in bytes
 	 * @return the entire packet's data
 	 */
-	public byte[] getPacket(){
+	public synchronized byte[] getPacket(){
 		return packet;
 	}
 	
@@ -170,7 +170,7 @@ public class Packet {
 	 * Gets the source address for this packet
 	 * @return the srcAddr as a short
 	 */
-	public short getSrcAddr(){
+	public synchronized short getSrcAddr(){
 		return srcAddr;
 	}
 	
@@ -178,7 +178,7 @@ public class Packet {
 	 * Gets the destination address for this packet
 	 * @return the destAdr as a short
 	 */
-	public short getDestAddr(){
+	public synchronized short getDestAddr(){
 		return destAddr;
 	}
 	
@@ -187,7 +187,7 @@ public class Packet {
 	 * Sender checks so that it can remove the packet from the QUEUE
 	 * @return true if this packet has been ACKed
 	 */
-	public boolean isAcked() {
+	public synchronized boolean isAcked() {
 		return isACKed;
 	}
 
@@ -195,7 +195,7 @@ public class Packet {
 	 * Gets the type of packet this is
 	 * @return 0 if Data, 1 if ACK, 2 if Beacon, 4 if CTS, 5 if RTS
 	 */
-	public short getFrameType(){
+	public synchronized short getFrameType(){
 		return frameType;
 	}
 
@@ -203,7 +203,7 @@ public class Packet {
 	* Gets the sequence number of the packet
 	* @return the sequence number of the packet
 	*/
-	public short getSeqNum(){
+	public synchronized short getSeqNum(){
 		return seqNum;
 	}
 
@@ -211,7 +211,7 @@ public class Packet {
 	* Gets whether or not the packet was corrupted
 	* @return true if the packet was corrupted
 	*/
-	public boolean checkIfCorrupt(){
+	public synchronized boolean checkIfCorrupt(){
 		return corrupted;
 	}
 
@@ -219,7 +219,7 @@ public class Packet {
 	* Gets the number of sending retry attempts this packet has done
 	* @return the number of retry attempts
 	*/
-	public int getNumRetryAttempts(){
+	public synchronized int getNumRetryAttempts(){
 		return retryAttempts;
 	}
 	
@@ -232,7 +232,7 @@ public class Packet {
 	/**
 	 * Sets the retry bit and increments the number of times this packet has been resent
 	 */
-	public void retry(){
+	public synchronized void retry(){
 		retry = 1;
 		retryAttempts++;
 	}
@@ -241,7 +241,7 @@ public class Packet {
 	 * Sets this packet as being ACKed by the other host
 	 * Receiver sets this packet as being ACKed once it receives the ACK for this packet
 	 */
-	public void setAsAcked(){
+	public synchronized void setAsAcked(){
 		isACKed = true;
 	}
 	
@@ -249,7 +249,7 @@ public class Packet {
 	 * Sets the sequence number of this packet
 	 * @param sequenceNum - the sequence number to set this packet to
 	 */
-	public void setSeqNum(short sequenceNum){
+	public synchronized void setSeqNum(short sequenceNum){
 		seqNum = sequenceNum;
 	}
 

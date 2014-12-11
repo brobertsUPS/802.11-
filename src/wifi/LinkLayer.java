@@ -25,9 +25,8 @@ public class LinkLayer implements Dot11Interface {
 	private ArrayBlockingQueue<Packet> receiverBuf; 			//the buffer for receiving packets
 	
 	private HashMap<Short, Integer> sendSeqNums;				//seqNums for what we send out. key is destinationAddr, value is seqNum
-	
-	private int slotChoice;										//For command and status
-	private double beaconInterval;
+	private LocalClock localClock;
+
 	private int statusCode;
 	
 	/**
@@ -43,13 +42,16 @@ public class LinkLayer implements Dot11Interface {
 		this.output = output;
 
 		theRF = new RF(null, null);
+
 		senderBuf = new ArrayDeque<Packet>(4); 			//limited buffer size of 4
 		receiverBuf = new ArrayBlockingQueue<Packet>(4); 
+
 		sendSeqNums = new HashMap<Short, Integer>();
+
+		localClock = new LocalClock(theRF);
 		
-		long[] clockOffset = {0};//starts the clock offset at 0
-		Thread sender = new Thread(new Sender(theRF, senderBuf, ourMAC, clockOffset));
-		Thread receiver = new Thread(new Receiver(theRF, senderBuf, receiverBuf, ourMAC, clockOffset, output));
+		Thread sender = new Thread(new Sender(theRF, senderBuf, ourMAC, localClock));
+		Thread receiver = new Thread(new Receiver(theRF, senderBuf, receiverBuf, ourMAC, localClock, output));
 		
 		sender.start();
 		receiver.start();
@@ -111,16 +113,18 @@ public class LinkLayer implements Dot11Interface {
 //			output.println("Cmd #4: Set beep interval.  Currently at 1 secondsValue is interpreted as seconds between beeps; -1 disables");
 			
 			//print slot choice and beacon interval
-			output.println("The current slot choice: "+slotChoice);
-			output.println("The current beacon interval " + beaconInterval);
-			
+			output.println("The current slot choice: " + localClock.getSlotSelectionFixed());
+			output.println("The current beacon interval: " + localClock.getBeaconInterval()
+				);
+
+			return 0;
 		}
-		if(cmd == 1){
+		else if(cmd == 1){
 			//turn diagnostic on or off
 			output.println("Diagnostic turned on");
 			output.println("Diagnostic turned off");
 		}
-		if(cmd == 2){
+		else if(cmd == 2){
 			output.println("Random slot window");
 			//random slot window
 				//choose randomly between 0 and max collision window allowed
@@ -129,7 +133,7 @@ public class LinkLayer implements Dot11Interface {
 			//fixed
 				//choose maximum collision window allowed
 		}
-		if(cmd == 3){
+		else if(cmd == 3){
 			if(val == -1){
 				//stop beacons
 				output.println("Beacons have been stopped");

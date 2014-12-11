@@ -19,7 +19,7 @@ import java.util.*;
 public class Receiver implements Runnable {
 	private RF rf;
 	private short ourMac;
-	private long[] clockOffset; //array with one item in it, used as a pointer
+	private LocalClock localClock;
 	private PrintWriter output;
 
 	private ArrayDeque<Packet> senderBuf;
@@ -35,16 +35,16 @@ public class Receiver implements Runnable {
 	 * @param senderBuffer the queue of packets needing to be sent (use in Reciever to confirm ACK)
 	 * @param receiverBuffer the que of received packets
 	 * @param theMac our MAC address
-	 * @param currentClockOffset the offset from the time in rf.clock(), it is an array to be used as a pointer and shared with the sender
+	 * @param theLocalClock the local clock object
 	 * @param outputWriter the output to write to
 	 */
-	public Receiver(RF theRF, ArrayDeque<Packet> senderBuffer, ArrayBlockingQueue<Packet> receiverBuffer, short theMac, long[] currentClockOffset, PrintWriter outputWriter){
+	public Receiver(RF theRF, ArrayDeque<Packet> senderBuffer, ArrayBlockingQueue<Packet> receiverBuffer, short theMac, LocalClock theLocalClock, PrintWriter outputWriter){
 		rf = theRF;
 		senderBuf = senderBuffer;
 		receiverBuf = receiverBuffer;
 		ourMac = theMac;
 		output = outputWriter;
-		clockOffset = currentClockOffset;
+		localClock = theLocalClock;
 
 		recvSeqNums = new HashMap<Short, Short>();
 		outOfOrderTable = new HashMap<Short, ArrayList<Packet>>();
@@ -60,7 +60,7 @@ public class Receiver implements Runnable {
 			
 			//if the packet is a beacon
 			if(packet.getFrameType() == 2){
-				updateClockOffset(packet);
+				localClock.updateClockOffset(packet);
 			}
 			//else if it's destination is our mac address or -1 (-1 should be accepted by everyone)
 			else if(packet.getDestAddr() == ourMac || packet.getDestAddr() == -1){
@@ -81,7 +81,7 @@ public class Receiver implements Runnable {
 
 	/**
 	* Checks the sequence number on the packet, and does any necessary sequence number work
-	* @param packet - the packet whose sequence number it is checking
+	* @param packet the packet whose sequence number it is checking
 	*/
 	private void checkSeqNum(Packet packet){
 		short expectedSeqNum;
@@ -121,7 +121,7 @@ public class Receiver implements Runnable {
 
 	/**
 	* Helper method that checks if there are packets with higher seqNums waiting in the queue that should be given to the layer above
-	* @param packets - the queue of packets with higher seq nums
+	* @param packets the queue of packets with higher seq nums
 	*/
 	private void checkOutOfOrderTable(ArrayList<Packet> packets){
 		if(!packets.isEmpty()){
@@ -141,26 +141,5 @@ public class Receiver implements Runnable {
 				}
 			}
 		}
-	}
-
-	/**
-	* Updates the offset for the clock based on the give beacon packet's time
-	* @param packet - the beacon packet that has the time to update to
-	*/
-	private void updateClockOffset(Packet packet){
-		//get the time in a byte array from the data buf
-		byte[] timeArray = packet.getDataBuf();
-
-		//start out the time variable when initializing, then copy the rest of it over in the loop
-		long otherHostTime = timeArray[timeArray.length-1];
-		for(int i = timeArray.length - 2; i >= 0; i--){
-			otherHostTime = otherHostTime << 8;
-			otherHostTime += timeArray[i];
-		}
-
-		//get the difference in the clocks
-		long clockDifference = otherHostTime - (clockOffset[0] + rf.clock());
-		if(clockDifference > 0)//if the other host is ahead of us in time, advance our time to match
-			clockOffset[0] += clockDifference;
 	}
 }
