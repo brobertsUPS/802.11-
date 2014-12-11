@@ -52,17 +52,32 @@ public class Receiver implements Runnable {
 	public void run() {
 		while(true){
 			Packet packet = new Packet(rf.receive()); 
-			
-			//if the packet is a beacon
-			if(packet.getFrameType() == 2)
-				localClock.updateClockOffset(packet);
 
-			//else if it's destination is our mac address or -1 (-1 should be accepted by everyone)
-			else if(packet.getDestAddr() == ourMac || packet.getDestAddr() == -1){
+			//if the packet is corrupt, throw out the packet by "continuing" to the next loop iteration
+			if(packet.checkIfCorrupt())
+				continue;
+			
+			//if it was sent to everyone
+			if(packet.getDestAddr() == -1){
+				//if the packet is a beacon
+				if(packet.getFrameType() == 2)
+					localClock.updateClockOffset(packet);
+				else{
+					try{ 
+						receiverBuf.put(packet);
+					} catch(InterruptedException e){
+						System.err.println("Receiver interrupted!");
+					}
+				}
+			}
+
+			//else if it's destination is our mac address
+			else if(packet.getDestAddr() == ourMac){
+
 				if(receiverBuf.size() == 4){ break; }////ignore -----NOTE: what is this??-----
 				
 				//if its an ack AND it has the same sequence number
-				if((packet.getFrameType() == 1) && !packet.checkIfCorrupt() && (packet.getSeqNum() == senderBuf.peek().getSeqNum()))
+				if((packet.getFrameType() == 1) && (packet.getSeqNum() == senderBuf.peek().getSeqNum()))
 					senderBuf.peek().setAsAcked();		//tell sender that that packet was ACKed
 				//not an ack so recieve the data
 				else
