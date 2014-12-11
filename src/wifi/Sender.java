@@ -100,10 +100,8 @@ public class Sender implements Runnable{
 			if(rf.inUse()){									//If someone popped in right before us we have to wait again
 				waitForIdleChannel();
 			}
-			else{											//no one on channel and we are clear to go
-				rf.transmit(currentPacket.toBytes());
-				waitForAck();
-			}
+			else	//no one on channel and we are clear to go
+				transmitPacket();
 		}
 	}
 
@@ -124,10 +122,8 @@ public class Sender implements Runnable{
 				backoffCount--;								
 				waitSlotTime();		
 			}
-			else{											//go to the end of waiting and can transmit
-				rf.transmit(currentPacket.toBytes());
-				waitForAck();
-			}
+			else	//go to the end of waiting and can transmit
+				transmitPacket();
 		}
 	}
 
@@ -141,12 +137,11 @@ public class Sender implements Runnable{
 		} catch (InterruptedException e) {
 			System.err.println("Failed waiting DIFS");
 		}
-		if(!rf.inUse()){								//still not in use and we are good to send
-			rf.transmit(currentPacket.toBytes());
-			waitForAck();
-		}else{ 											//someone got on the channel and we need to wait until they are done to resume
+
+		if(!rf.inUse())	//still not in use and we are good to send
+			transmitPacket();
+		else	//someone got on the channel and we need to wait until they are done to resume
 			waitForIdleChannel();
-		}
 	}
 	
 
@@ -183,38 +178,34 @@ public class Sender implements Runnable{
 	/**
 	 * State that waits for an ACK
 	 */
-	private void waitForAck(){
-		localClock.startACKTimer();
-
-		while(!senderBuf.isEmpty()){ //make sure there is something on the buffer (could have pulled off in a previous iteration of the while)
-			//if it was a beacon, don't wait for an ack
-			if(currentPacket.getFrameType() == 2){
-				senderBuf.remove(currentPacket);
-				break;
-			}
-			else if(currentPacket.isAcked()){
-				senderBuf.remove(currentPacket); //since it is acked we pull it off
-				windowSize = 1; //reset window size
-				break;
-			}
-
-			if(currentPacket.getNumRetryAttempts()  >= RF.dot11RetryLimit){  //hit retry limit and it breaks so that it will pull it off the buffer								
-				System.out.println("Hit retry LIMIT");
-				senderBuf.remove(currentPacket);
-				windowSize = 1;
-				break;
-			}
-
-			if(localClock.checkACKTimeout()) //if it has taken longer than a ten seconds, so timeout and retransmit
-				timedOut();
-			else{ //else not timed out yet
-				try {
-					Thread.sleep(10);
-				} catch (InterruptedException e) {
-					System.err.println("Failed waiting for ACK");
-				}
-			}
+	private void waitForACK(){
+		//if it was a beacon, don't wait for an ack
+		if(currentPacket.getFrameType() == 2)
+			senderBuf.remove(currentPacket);
+			
+		else if(currentPacket.isAcked()){
+			senderBuf.remove(currentPacket); //since it is acked we pull it off
+			windowSize = 1; //reset window size
 		}
+
+		else if(currentPacket.getNumRetryAttempts()  >= RF.dot11RetryLimit){  //hit retry limit and it breaks so that it will pull it off the buffer								
+			System.out.println("Hit retry LIMIT");
+			senderBuf.remove(currentPacket);
+			windowSize = 1;
+		}
+
+		else if(localClock.checkACKTimeout()) //if it has taken longer than a ten seconds, so timeout and retransmit
+			timedOut();
+		
+		else{ //else not timed out yet
+			try {
+				Thread.sleep(10);
+			} catch (InterruptedException e) {
+				System.err.println("Failed waiting for ACK");
+			}
+			waitForACK();
+		}
+		
 	}
 
 
@@ -238,6 +229,16 @@ public class Sender implements Runnable{
 //----------------------------------------------------------------------------------------------------------//
 
 	/**
+	* Transmits the packet and waits for an ACK
+	*/
+	private void transmitPacket(){
+		rf.transmit(currentPacket.toBytes());
+
+		localClock.startACKTimer();
+		waitForACK();
+	}
+
+	/**
 	* Checks if the beacon should be sent
 	* If it should, creates a beacon packet and puts on the senderBuffer
 	*/
@@ -250,12 +251,12 @@ public class Sender implements Runnable{
 	}
 
 	/**
-	* Helper method that deals with the occassion where we timed out while waiting for an ack
+	* Deals with the occassion where we timed out while waiting for an ack
 	*/
 	private void timedOut(){
 		System.out.println("SENDER got to timeout and now trying to retransmit");
 
-		windowSize *=2; 	//double window size
+		windowSize *= 2; 	//double window size
 
 		//get the backoff count based on if the slot selection is fixed
 		if(localClock.getSlotSelectionFixed()) 
@@ -263,7 +264,7 @@ public class Sender implements Runnable{
 		else
 			backoffCount = (int) (Math.random()*(windowSize + 1));
 
-		currentPacket.retry();//increment the retry attempt counter in the packet
+		currentPacket.retry(); //increment the retry attempt counter in the packet
 
 		//try to resend
 		if(rf.inUse())

@@ -122,8 +122,7 @@ public class Receiver implements Runnable {
 		if(!packets.isEmpty()){
 			for(int i = 0; i < packets.size(); i++){ //go through everything in the queue
 				if(packets.get(i) == null){//if this spot is a gap
-					ArrayList<Packet> temp = new ArrayList<Packet>(packets.subList(i+1, packets.size()));
-					outOfOrderTable.put(packets.get(i).getSrcAddr(), temp); //push up the items in the arrayList
+					outOfOrderTable.put(packets.get(i).getSrcAddr(), new ArrayList<Packet>(packets.subList(i+1, packets.size()))); //push up the items in the arrayList
 					recvSeqNums.put(packets.get(i).getSrcAddr(), (short)i);//update expected seqNum
 					break;
 				}
