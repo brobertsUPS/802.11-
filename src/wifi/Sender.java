@@ -1,15 +1,13 @@
 package wifi;
-import java.util.ArrayDeque;
-import java.util.HashMap;
+
+import java.util.*;
 
 import rf.RF;
 
 /**
- *
  * Threaded sender that continually checks the channel for idle time to send packets
  * @author Brandon Roberts
  * @author Nate Olderman
- *
  */
 public class Sender implements Runnable{
 	private RF rf;

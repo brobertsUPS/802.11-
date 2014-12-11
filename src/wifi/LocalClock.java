@@ -6,7 +6,6 @@ import rf.RF;
  * A class to represent an 802.11~ clock.
  * @author Nate Olderman
  * @author Brandon Roberts
- *
  */
 public class LocalClock{
 	private static final int DIFS = RF.aSIFSTime + (2 * RF.aSlotTime);

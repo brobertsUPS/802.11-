@@ -2,19 +2,14 @@ package wifi;
 import rf.RF;
 
 import java.io.PrintWriter;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.concurrent.*;
 import java.util.*;
 
 
 /**
- *
  * Threaded Receiver that continually watches the RF layer for incoming information
  * @author Brandon Roberts
  * @author Nate Olderman
- *
  */
 public class Receiver implements Runnable {
 	private RF rf;

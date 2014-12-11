@@ -1,12 +1,10 @@
 package wifi;
+
 import rf.RF;
 
 import java.util.concurrent.*;
 import java.io.PrintWriter;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.*;
 
 /**
  * Use this layer as a starting point for your project code. See {@link Dot11Interface} for more
@@ -14,7 +12,6 @@ import java.util.HashMap;
  * @author richards
  * @author Nate Olderman
  * @author Brandon Roberts 
- *
  */
 public class LinkLayer implements Dot11Interface {
 	private RF theRF;
@@ -110,12 +107,11 @@ public class LinkLayer implements Dot11Interface {
 			output.println("Cmd #1: Set debug level.  Currently at 0 \n\tUse -1 for full debug output, 0 for no output");
 			output.println("Cmd #2: Set slot selection method.  Currently random \n\tUse 0 for random slot selection, any other value to use maxCW");
 			output.println("Cmd #3: Set beacon interval.  Currently at 3 seconds \n\tValue specifies seconds between the start of beacons; -1 disables");
-//			output.println("Cmd #4: Set beep interval.  Currently at 1 secondsValue is interpreted as seconds between beeps; -1 disables");
+			//output.println("Cmd #4: Set beep interval.  Currently at 1 secondsValue is interpreted as seconds between beeps; -1 disables");
 			
 			//print slot choice and beacon interval
 			output.println("The current slot choice: " + localClock.getSlotSelectionFixed());
-			output.println("The current beacon interval: " + localClock.getBeaconInterval()
-				);
+			output.println("The current beacon interval: " + localClock.getBeaconInterval());
 
 			return 0;
 		}

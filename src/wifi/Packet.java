@@ -7,7 +7,6 @@ import java.util.zip.CRC32;
  * A class to represent an 802.11~ frame.
  * @author Nate Olderman
  * @author Brandon Roberts
- *
  */
 public class Packet {
 	
