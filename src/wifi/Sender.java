@@ -179,8 +179,8 @@ public class Sender implements Runnable{
 	 * State that waits for an ACK
 	 */
 	private void waitForACK(){
-		//if it was a beacon, don't wait for an ack
-		if(currentPacket.getFrameType() == 2)
+		//if it was being sent to MAC address -1 (Bcast) or was a beacon, don't wait for an ack
+		if(currentPacket.getDestAddr() == -1 || currentPacket.getFrameType() == 2)
 			senderBuf.remove(currentPacket);
 			
 		else if(currentPacket.isAcked()){

@@ -63,10 +63,10 @@ public class LinkLayer implements Dot11Interface {
 		Packet packet = new Packet((short)0, getNextSeqNum(dest, sendSeqNums), dest, ourMAC, data);
 		output.println("LinkLayer: Sending " + len + " bytes to " + dest);
 		
-		if(senderBuf.size() == 4)							//Hit limit on buffer size
+		if(senderBuf.size() == 4)	//Hit limit on buffer size
 			return 0;
 		else{
-			senderBuf.push(packet); 						//have to fill senderBuf with the data from packet
+			senderBuf.push(packet); //have to fill senderBuf with the data from packet
 			return len;
 		}
 	}
