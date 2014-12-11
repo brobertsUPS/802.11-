@@ -50,11 +50,18 @@ public class Receiver implements Runnable {
 	 * Begins waiting for the rf layer to receive and puts it in the receiverBuf
 	 */
 	public void run() {
+		if(receiverBuf == null)
+			localClock.setLastEvent(7);//BAD_ADDRESS 	Pointer to a buffer or address was NULL
+		
 		while(true){
 			Packet packet = new Packet(rf.receive()); 
 
 			//if the buffer is full or the packet is corrupt
-			if(receiverBuf.size() >= 4 || packet.checkIfCorrupt())
+			if(receiverBuf.size() >= 4 ){
+				localClock.setLastEvent(10);//INSUFFICIENT_BUFFER_SPACE 	Outgoing transmission rejected due to insufficient buffer space
+				continue;
+			}
+			if(packet.checkIfCorrupt())
 				continue;
 
 			//if it was sent to everyone
@@ -74,8 +81,6 @@ public class Receiver implements Runnable {
 
 			//else if it's destination is our mac address
 			else if(packet.getDestAddr() == ourMac){
-
-				if(receiverBuf.size() == 4){ break; }////ignore -----NOTE: what is this??-----
 				
 				//if its an ack AND it has the same sequence number
 				if((packet.getFrameType() == 1) && (packet.getSeqNum() == senderBuf.peek().getSeqNum()))

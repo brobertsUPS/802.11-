@@ -33,19 +33,30 @@ public class LinkLayer implements Dot11Interface {
 	 * @param output Output stream associated with GUI
 	 */
 	public LinkLayer(short ourMAC, PrintWriter output){
+		
 		output.println("LinkLayer: Constructor ran.");
 
+		if(ourMAC > 65534 || ourMAC < -1)//largest viable mac is 65534
+			localClock.setLastEvent(8);//BAD_MAC_ADDRESS 	Illegal MAC address was specified
+		
 		this.ourMAC = ourMAC;
 		this.output = output;
 
 		theRF = new RF(null, null);
-
+		
 		senderBuf = new ArrayDeque<Packet>(4); 			//limited buffer size of 4
 		receiverBuf = new ArrayBlockingQueue<Packet>(4); 
-
+		
+		if(senderBuf.size() <0 || receiverBuf.size() <0)
+			localClock.setLastEvent(6);//BAD_BUF_SIZE 	Buffer size was negative
+			
 		sendSeqNums = new HashMap<Short, Integer>();
 
 		localClock = new LocalClock(theRF);
+		
+		localClock.setLastEvent(1); //SUCCESS 	Initial value if 802_init is successful
+		if(theRF == null)
+			localClock.setLastEvent(3); //RF_INIT_FAILED 	Attempt to initialize RF layer failed
 		
 		Thread sender = new Thread(new Sender(theRF, senderBuf, ourMAC, localClock));
 		Thread receiver = new Thread(new Receiver(theRF, senderBuf, receiverBuf, ourMAC, localClock, output));
@@ -66,11 +77,15 @@ public class LinkLayer implements Dot11Interface {
 			output.println("Attepmting to send packet: " + packet.toString() + " At Time: " + (localClock.getLocalTime()));
 			output.println("Slot Count: " + localClock.getBackoffCount() + " Collision Window: " + localClock.getCollisionWindow());
 		}
+		if(dest > 65534  || data == null || len >2038)
+			localClock.setLastEvent(9);//ILLEGAL_ARGUMENT 	One or more arguments are invalid
 		
 		output.println("LinkLayer: Sending " + len + " bytes to " + dest);
 		
-		if(senderBuf.size() == 4)	//Hit limit on buffer size
+		if(senderBuf.size() == 4){	//Hit limit on buffer size
+			localClock.setLastEvent(10);//INSUFFICIENT_BUFFER_SPACE 	Outgoing transmission rejected due to insufficient buffer space
 			return 0;
+			}
 		else{
 			senderBuf.push(packet); //have to fill senderBuf with the data from packet
 			return len;
@@ -84,6 +99,9 @@ public class LinkLayer implements Dot11Interface {
 	public int recv(Transmission t) {
 		output.println("LinkLayer: Pretending to block on recv()");
 
+		if(t == null)
+			localClock.setLastEvent(9);// ILLEGAL_ARGUMENT 	One or more arguments are invalid
+		
 		Packet packet;
 		try{
 			packet = receiverBuf.take();//receive the packet
@@ -102,8 +120,8 @@ public class LinkLayer implements Dot11Interface {
 	 */
 	public int status() {
 		if(localClock.getDebugOn())
-			output.println("Current Status: " + localClock.getCurrentStatus());
-		return localClock.getCurrentStatus();
+			output.println("Current Status: " + localClock.getLastEvent());
+		return localClock.getLastEvent();
 	}
 	
 	/**
@@ -184,5 +202,9 @@ public class LinkLayer implements Dot11Interface {
 	
 	private void printSettings(){
 		output.println("");
+	}
+	
+	public int getMAC(){
+		return ourMAC;
 	}
 }

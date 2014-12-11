@@ -178,7 +178,7 @@ public class LocalClock{
 	 * Determines the currentStatus
 	 * @return the currentStatus
 	 */
-	public synchronized int getCurrentStatus(){
+	public synchronized int getLastEvent(){
 		return currentStatus;
 	}
 
@@ -241,7 +241,7 @@ public class LocalClock{
 	 * Updates the currentStatus of the propram
 	 * @param newStatus
 	 */
-	public synchronized void setCurrentStatus(int newStatus){
+	public synchronized void setLastEvent(int newStatus){
 		currentStatus = newStatus;
 	}
 
