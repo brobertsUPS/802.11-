@@ -136,7 +136,6 @@ public class Sender implements Runnable{
 	 * State that waits the DIFS time 
 	 */
 	private void waitDIFS(){
-		
 		try {
 			Thread.sleep(localClock.roundedUpDIFS());
 		} catch (InterruptedException e) {
@@ -202,6 +201,7 @@ public class Sender implements Runnable{
 			if(currentPacket.getNumRetryAttempts()  >= RF.dot11RetryLimit){  //hit retry limit and it breaks so that it will pull it off the buffer								
 				System.out.println("Hit retry LIMIT");
 				senderBuf.remove(currentPacket);
+				windowSize = 1;
 				break;
 			}
 
@@ -254,6 +254,7 @@ public class Sender implements Runnable{
 	*/
 	private void timedOut(){
 		System.out.println("SENDER got to timeout and now trying to retransmit");
+
 		windowSize *=2; 	//double window size
 
 		//get the backoff count based on if the slot selection is fixed

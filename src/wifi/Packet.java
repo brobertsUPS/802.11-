@@ -9,7 +9,6 @@ import java.util.zip.CRC32;
  * @author Brandon Roberts
  */
 public class Packet {
-	
 	//control information
 	private short retry; //retry bit if the packet is being resent
 	private short seqNum; //sequence number of the packet

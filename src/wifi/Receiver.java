@@ -54,18 +54,16 @@ public class Receiver implements Runnable {
 			Packet packet = new Packet(rf.receive()); 
 			
 			//if the packet is a beacon
-			if(packet.getFrameType() == 2){
+			if(packet.getFrameType() == 2)
 				localClock.updateClockOffset(packet);
-			}
+
 			//else if it's destination is our mac address or -1 (-1 should be accepted by everyone)
 			else if(packet.getDestAddr() == ourMac || packet.getDestAddr() == -1){
-				
 				if(receiverBuf.size() == 4){ break; }////ignore -----NOTE: what is this??-----
 				
 				//if its an ack AND it has the same sequence number
 				if((packet.getFrameType() == 1) && !packet.checkIfCorrupt() && (packet.getSeqNum() == senderBuf.peek().getSeqNum()))
 					senderBuf.peek().setAsAcked();		//tell sender that that packet was ACKed
-				
 				//not an ack so recieve the data
 				else
 					checkSeqNum(packet);
@@ -79,17 +77,8 @@ public class Receiver implements Runnable {
 	* @param packet the packet whose sequence number it is checking
 	*/
 	private void checkSeqNum(Packet packet){
-		short expectedSeqNum;
-
-		//check whether or not we have recieved from this address before
-		if(!recvSeqNums.containsKey(packet.getSrcAddr())){
-			recvSeqNums.put(packet.getSrcAddr(), (short) 0); //assuming it starts at zero
-			expectedSeqNum = 0;
-			outOfOrderTable.put(packet.getSrcAddr(), new ArrayList<Packet>());
-		}
-		else
-			expectedSeqNum = recvSeqNums.get(packet.getSrcAddr()).shortValue(); //getting what sequence number we expect
-
+		short expectedSeqNum = updateSeqNum(packet);
+		
 		//if the sequence number is what we expect
 		if(expectedSeqNum == packet.getSeqNum()){
 			//put it in the reciever buf to be taken by the layer above
@@ -111,6 +100,17 @@ public class Receiver implements Runnable {
 			output.println("Detected a gap in the sequence nmbers on incoming data packets from host: " + packet.getSrcAddr());
 			outOfOrderTable.get(packet.getSrcAddr()).add(packet.getSeqNum() - expectedSeqNum - 1, packet);//adding the packet to the spot in the arraylist corresponding to the distance from the expected sequence number -1 to maintain starting at 0
 		}
+	}
+
+	private short updateSeqNum(Packet packet){
+		//check whether or not we have recieved from this address before
+		if(!recvSeqNums.containsKey(packet.getSrcAddr())){
+			recvSeqNums.put(packet.getSrcAddr(), (short) 0); //assuming it starts at zero
+			outOfOrderTable.put(packet.getSrcAddr(), new ArrayList<Packet>());
+			return 0;
+		}
+		else
+			return recvSeqNums.get(packet.getSrcAddr()).shortValue(); //getting what sequence number we expect
 	}
 
 
