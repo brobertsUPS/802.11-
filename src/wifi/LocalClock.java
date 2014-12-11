@@ -25,6 +25,11 @@ public class LocalClock{
 	private long startACKWait;
 	
 	private boolean debugOn;
+	
+	private int backoffCount;
+	private int windowSize;
+	
+	private int currentStatus;
 
 
 	/**
@@ -40,6 +45,9 @@ public class LocalClock{
 		slotSelectionFixed = false; //defaults to random slot selection
 		beaconsOn = true;
 		debugOn = false;
+		backoffCount = 0;
+		windowSize = 1;
+		currentStatus = 0;
 	}
 
 
@@ -149,12 +157,36 @@ public class LocalClock{
 	public synchronized boolean getDebugOn(){
 		return debugOn;
 	}
+	
+	/**
+	 * Determines what the backoff count is currently at
+	 * @return the size of the backoff count
+	 */
+	public synchronized int getBackoffCount(){
+		return backoffCount;
+	}
+	
+	/**
+	 * Determines what the collission window is currently at
+	 * @return the size of the collision window
+	 */
+	public synchronized int getCollisionWindow(){
+		return windowSize;
+	}
+	
+	/**
+	 * Determines the currentStatus
+	 * @return the currentStatus
+	 */
+	public synchronized int getCurrentStatus(){
+		return currentStatus;
+	}
 
 	/**
 	 * Returns the current clock offset
 	 * @return the clock offset
 	 */
-	public long getLocalTime(){
+	public synchronized long getLocalTime(){
 		return clockOffset + rf.clock();
 	}
 
@@ -189,6 +221,28 @@ public class LocalClock{
 			debugOn = false;
 		else
 			debugOn = true;
+	}
+	
+	/**
+	 * Sets the backoffCount
+	 */
+	public synchronized void setBackoffCount(int backoff){
+		backoffCount = backoff;
+	}
+	
+	/**
+	 * Sets teh collision windowSize
+	 */
+	public synchronized void setCollisionWindow(int collisionWindow){
+		windowSize = collisionWindow;
+	}
+	
+	/**
+	 * Updates the currentStatus of the propram
+	 * @param newStatus
+	 */
+	public synchronized void setCurrentStatus(int newStatus){
+		currentStatus = newStatus;
 	}
 
 }

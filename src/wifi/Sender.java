@@ -15,8 +15,6 @@ public class Sender implements Runnable{
 	private short ourMAC;
 	
 	private ArrayDeque<Packet> senderBuf;
-	private int backoffCount;
-	private int windowSize;
 
 	private Packet currentPacket;	//keep track of the current packet that is being sent
 
@@ -34,8 +32,6 @@ public class Sender implements Runnable{
 		ourMAC = ourMACAddr;
 		localClock = theLocalClock;
 
-		backoffCount = 0;
-		windowSize = 1;
 		currentPacket = null;
 	}
 	
@@ -92,9 +88,9 @@ public class Sender implements Runnable{
 		} catch (InterruptedException e) {
 			System.err.println("Failed waiting DIFS");
 		}
-
+		int backoffCount = localClock.getBackoffCount();
 		if(backoffCount != 0){								//do a backoff if we havent counted down to 0
-			backoffCount--;
+			localClock.setBackoffCount(backoffCount-1);
 			waitSlotTime();
 		}else{												//finished backoff wait and got to 0
 			if(rf.inUse()){									//If someone popped in right before us we have to wait again
@@ -118,8 +114,9 @@ public class Sender implements Runnable{
 		if(rf.inUse())										//channel is used and we can't continue doing our slot time wait
 			waitForIdleChannel();
 		else{
+			int backoffCount = localClock.getBackoffCount();
 			if(backoffCount > 0){							//still haven't reached the end of backoff waiting
-				backoffCount--;								
+				localClock.setBackoffCount(backoffCount -1);								
 				waitSlotTime();		
 			}
 			else	//go to the end of waiting and can transmit
@@ -159,7 +156,6 @@ public class Sender implements Runnable{
 			waitForIdleChannelToACK();
 	}
 	
-
 	/**
 	 * State that waits for the the channel to be idle in order to send an ACK
 	 */
@@ -174,7 +170,6 @@ public class Sender implements Runnable{
 		waitSIFS();
 	}
 
-
 	/**
 	 * State that waits for an ACK
 	 */
@@ -185,13 +180,13 @@ public class Sender implements Runnable{
 			
 		else if(currentPacket.isAcked()){
 			senderBuf.remove(currentPacket); //since it is acked we pull it off
-			windowSize = 1; //reset window size
+			localClock.setCollisionWindow(1); //reset window size
 		}
 
 		else if(currentPacket.getNumRetryAttempts()  >= RF.dot11RetryLimit){  //hit retry limit and it breaks so that it will pull it off the buffer								
 			System.out.println("Hit retry LIMIT");
 			senderBuf.remove(currentPacket);
-			windowSize = 1;
+			localClock.setCollisionWindow(1);
 		}
 
 		else if(localClock.checkACKTimeout()) //if it has taken longer than a ten seconds, so timeout and retransmit
@@ -256,13 +251,13 @@ public class Sender implements Runnable{
 	private void timedOut(){
 		System.out.println("SENDER got to timeout and now trying to retransmit");
 
-		windowSize *= 2; 	//double window size
+		localClock.setCollisionWindow(localClock.getCollisionWindow()*2);//windowSize *= 2; 	//double window size
 
 		//get the backoff count based on if the slot selection is fixed
 		if(localClock.getSlotSelectionFixed()) 
-			backoffCount = windowSize;
+			localClock.setBackoffCount(localClock.getCollisionWindow());//backoffCount = windowSize;
 		else
-			backoffCount = (int) (Math.random()*(windowSize + 1));
+			localClock.setBackoffCount((int)(Math.random()* (localClock.getCollisionWindow()+1)));//backoffCount = (int) (Math.random()*(windowSize + 1));
 
 		currentPacket.retry(); //increment the retry attempt counter in the packet
 

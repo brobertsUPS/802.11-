@@ -64,7 +64,7 @@ public class LinkLayer implements Dot11Interface {
 		Packet packet = new Packet((short)0, getNextSeqNum(dest, sendSeqNums), dest, ourMAC, data);
 		if(localClock.getDebugOn()){
 			output.println("Attepmting to send packet: " + packet.toString() + " At Time: " + (localClock.getLocalTime()));
-			
+			output.println("Slot Count: " + localClock.getBackoffCount() + " Collision Window: " + localClock.getCollisionWindow());
 		}
 		
 		output.println("LinkLayer: Sending " + len + " bytes to " + dest);
@@ -98,18 +98,12 @@ public class LinkLayer implements Dot11Interface {
 	}
 	
 	/**
-	 * Returns a current status code. See docs for full description.
+	 * Returns the current status code. See docs for full description.
 	 */
 	public int status() {
-		
-		output.println("LinkLayer: Faking a status() return value of 0");
-		
-		if(localClock.getDebugOn()){
-			output.println("Status updated to: " + statusCode);
-			
-		}
-		
-		return 0;
+		if(localClock.getDebugOn())
+			output.println("Current Status: " + localClock.getCurrentStatus());
+		return localClock.getCurrentStatus();
 	}
 	
 	/**
