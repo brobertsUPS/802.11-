@@ -40,6 +40,9 @@ public class Sender implements Runnable{
 	 * Continually loops forever waiting for a new frame then trying to send it
 	 */
 	public void run() {
+		if(senderBuf==null)
+			localClock.setLastEvent(7);//BAD_ADDRESS 	Pointer to a buffer or address was NULL
+		
 		while(true)
 			waitForFrame();
 	}
@@ -54,8 +57,9 @@ public class Sender implements Runnable{
 	 */
 	private void waitForFrame(){
 		//checkBeacon();
-
+		
 		if(!senderBuf.isEmpty()){
+			
 			currentPacket = senderBuf.peek();
 
 			if(currentPacket.getFrameType() == 1){					// if this is an ACK we want to send
@@ -100,7 +104,6 @@ public class Sender implements Runnable{
 				transmitPacket();
 		}
 	}
-
 
 	/**
 	 * State that waits a slot time
@@ -174,16 +177,21 @@ public class Sender implements Runnable{
 	 * State that waits for an ACK
 	 */
 	private void waitForACK(){
+		if(currentPacket == null)
+			localClock.setLastEvent(7);//BAD_ADDRESS 	Pointer to a buffer or address was NULL
+		
 		//if it was being sent to MAC address -1 (Bcast) or was a beacon, don't wait for an ack
 		if(currentPacket.getDestAddr() == -1 || currentPacket.getFrameType() == 2)
 			senderBuf.remove(currentPacket);
 			
 		else if(currentPacket.isAcked()){
+			localClock.setLastEvent(4);//TX_DELIVERED 	Last transmission was acknowledged
 			senderBuf.remove(currentPacket); //since it is acked we pull it off
 			localClock.setCollisionWindow(1); //reset window size
 		}
 
-		else if(currentPacket.getNumRetryAttempts()  >= RF.dot11RetryLimit){  //hit retry limit and it breaks so that it will pull it off the buffer								
+		else if(currentPacket.getNumRetryAttempts()  >= RF.dot11RetryLimit){  //hit retry limit and it breaks so that it will pull it off the buffer
+			localClock.setLastEvent(5); //TX_FAILED 	Last transmission was abandoned after unsuccessful delivery attempts
 			System.out.println("Hit retry LIMIT");
 			senderBuf.remove(currentPacket);
 			localClock.setCollisionWindow(1);
