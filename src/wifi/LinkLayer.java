@@ -40,26 +40,28 @@ public class LinkLayer implements Dot11Interface {
 		this.output = output;
 
 		theRF = new RF(output, null);
-		if(theRF == null)
-			localClock.setLastEvent(3); //RF_INIT_FAILED 	Attempt to initialize RF layer failed
-
-
 		localClock = new LocalClock(theRF);
+		
+		if(theRF == null)
+			localClock.setLastEvent(LocalClock.RF_INIT_FAILED); //	Attempt to initialize RF layer failed
+
+
+		
 
 		if(ourMAC > MAX_MAC || ourMAC < -1)
-			localClock.setLastEvent(8);//BAD_MAC_ADDRESS 	Illegal MAC address was specified
+			localClock.setLastEvent(LocalClock.BAD_MAC_ADDRESS);// 	Illegal MAC address was specified
 
 
 		senderBuf = new ArrayDeque<Packet>(4); 			//limited buffer size of 4
 		receiverBuf = new ArrayBlockingQueue<Packet>(4); 
 		
 		if(senderBuf.size() <0 || receiverBuf.size() <0)
-			localClock.setLastEvent(6);//BAD_BUF_SIZE 	Buffer size was negative
+			localClock.setLastEvent(LocalClock.BAD_BUF_SIZE);//BAD_BUF_SIZE 	Buffer size was negative
 
 
 		sendSeqNums = new HashMap<Short, Integer>();
 
-		localClock.setLastEvent(1); //SUCCESS 	Initial value if 802_init is successful
+		localClock.setLastEvent(LocalClock.SUCCESS); //SUCCESS 	Initial value if 802_init is successful
 		
 		Thread sender = new Thread(new Sender(theRF, senderBuf, ourMAC, localClock, output));
 		Thread receiver = new Thread(new Receiver(theRF, senderBuf, receiverBuf, ourMAC, localClock, output));
@@ -85,10 +87,10 @@ public class LinkLayer implements Dot11Interface {
 		}
 		
 		if(dest > MAX_MAC)
-			localClock.setLastEvent(8);//ILLEGAL_MAC_ADDRESS
+			localClock.setLastEvent(LocalClock.BAD_MAC_ADDRESS);//ILLEGAL_MAC_ADDRESS
 		
 		if(data == null || len > MAX_DATA_LENGTH){
-			localClock.setLastEvent(9);//ILLEGAL_ARGUMENT 	One or more arguments are invalid
+			localClock.setLastEvent(LocalClock.ILLEGAL_ARGUMENT);//ILLEGAL_ARGUMENT 	One or more arguments are invalid
 
 			if(debugOn)
 				output.println("ILLEGAL_ARGUMENT");
@@ -97,7 +99,8 @@ public class LinkLayer implements Dot11Interface {
 		output.println("LinkLayer: Sending " + len + " bytes to " + dest);
 		
 		if(senderBuf.size() >= 4){	//Hit limit on buffer size
-			localClock.setLastEvent(10);//INSUFFICIENT_BUFFER_SPACE 	Outgoing transmission rejected due to insufficient buffer space
+			localClock.setLastEvent(LocalClock.INSUFFICIENT_BUFFER_SPACE);//Outgoing transmission rejected due to insufficient buffer space
+			
 			if(debugOn)
 				output.println("INSUFFICIENT_BUFFER_SPACE");
 			return 0;
@@ -115,7 +118,7 @@ public class LinkLayer implements Dot11Interface {
 	public int recv(Transmission t) {
 
 		if(t == null){
-			localClock.setLastEvent(9);// ILLEGAL_ARGUMENT 	One or more arguments are invalid
+			localClock.setLastEvent(LocalClock.ILLEGAL_ARGUMENT);//One or more arguments are invalid
 			if(localClock.getDebugOn())
 				output.println("ILLEGAL_ARGUMENT");
 		}
@@ -176,9 +179,9 @@ public class LinkLayer implements Dot11Interface {
 			localClock.setSlotSelectionFixed(val);
 			
 			if(val == 0)//random slot window
-				output.println("Random slot window with collision window: " + localClock.getCollisionWindow());
+				output.println("Set as random slot window with collision window: " + localClock.getCollisionWindow());
 			else
-				output.println("Fixed slot window with collision window: " + localClock.getCollisionWindow());
+				output.println("Set as fixed slot window with collision window: " + localClock.getCollisionWindow());
 		}
 		else if(cmd == 3){	//turn beacon off or set it to a specified number of seconds
 			localClock.setBeaconInterval(val);

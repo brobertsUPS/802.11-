@@ -46,7 +46,7 @@ public class Sender implements Runnable{
 	 */
 	public void run() {
 		if(senderBuf==null)
-			localClock.setLastEvent(7);//BAD_ADDRESS 	Pointer to a buffer or address was NULL
+			localClock.setLastEvent(LocalClock.BAD_ADDRESS);//Pointer to a buffer or address was NULL
 		
 		while(true)
 			waitForFrame();
@@ -183,7 +183,7 @@ public class Sender implements Runnable{
 	 */
 	private void waitForACK(){
 		if(currentPacket == null){
-			localClock.setLastEvent(7);//BAD_ADDRESS 	Pointer to a buffer or address was NULL
+			localClock.setLastEvent(LocalClock.BAD_ADDRESS);//BAD_ADDRESS 	Pointer to a buffer or address was NULL
 			if(localClock.getDebugOn())
 				output.println("BAD ADDRESS");
 		}
@@ -193,7 +193,7 @@ public class Sender implements Runnable{
 			senderBuf.remove(currentPacket);
 			
 		else if(currentPacket.isAcked()){
-			localClock.setLastEvent(4);//TX_DELIVERED 	Last transmission was acknowledged
+			localClock.setLastEvent(LocalClock.TX_DELIVERED);//TX_DELIVERED 	Last transmission was acknowledged
 			
 			if(localClock.getDebugOn())
 				output.println("TX DELIVERED");
@@ -203,7 +203,7 @@ public class Sender implements Runnable{
 		}
 
 		else if(currentPacket.getNumRetryAttempts()  >= RF.dot11RetryLimit){  //hit retry limit and it breaks so that it will pull it off the buffer
-			localClock.setLastEvent(5); //TX_FAILED 	Last transmission was abandoned after unsuccessful delivery attempts
+			localClock.setLastEvent(LocalClock.TX_FAILED); //TX_FAILED 	Last transmission was abandoned after unsuccessful delivery attempts
 			
 			if(localClock.getDebugOn())
 				output.println("TX FAILED");
