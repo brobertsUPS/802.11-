@@ -53,16 +53,25 @@ public class Receiver implements Runnable {
 		while(true){
 			Packet packet = new Packet(rf.receive()); 
 
-			//if the buffer is full or the packet is corrupt
+			//if the buffer is full or the packet is corrupt, "continue" which means skip this packet
 			if(receiverBuf.size() >= 4 || packet.checkIfCorrupt())
 				continue;
 
 			//if it was sent to everyone
 			if(packet.getDestAddr() == -1){
+				//base the sequence number of packets sending to -1 off that general address (use dest addr)
+				//so we don't base it off of the other host's address (we emailed about this Brad)
+				//if the sequence number is less than expected, just ignore this packet
+				if(packet.getSeqNum() < getExpectedSeqNum(packet.getDestAddr()))
+					continue;
+				else //update the expected sequence number to after what we received
+					recvSeqNums.put(packet.getSrcAddr(), packet.getSeqNum() + 1);
 
 				//if the packet is a beacon
-				if(packet.getFrameType() == 2)
+				if(packet.getFrameType() == 2){
 					localClock.updateClockOffset(packet);
+
+				}
 				else{
 					try{ 
 						receiverBuf.put(packet);
@@ -74,9 +83,6 @@ public class Receiver implements Runnable {
 
 			//else if it's destination is our mac address
 			else if(packet.getDestAddr() == ourMac){
-
-				if(receiverBuf.size() == 4){ break; }////ignore -----NOTE: what is this??-----
-				
 				//if its an ack AND it has the same sequence number
 				if((packet.getFrameType() == 1) && (packet.getSeqNum() == senderBuf.peek().getSeqNum()))
 					senderBuf.peek().setAsAcked();		//tell sender that that packet was ACKed
