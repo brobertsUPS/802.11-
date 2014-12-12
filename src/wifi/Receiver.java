@@ -50,8 +50,11 @@ public class Receiver implements Runnable {
 	 * Begins waiting for the rf layer to receive and puts it in the receiverBuf
 	 */
 	public void run() {
-		if(receiverBuf == null)
+		if(receiverBuf == null){
 			localClock.setLastEvent(7);//BAD_ADDRESS 	Pointer to a buffer or address was NULL
+			if(localClock.getDebugOn())
+				output.println("BAD_ADDRESS");
+		}
 		
 		while(true){
 			Packet packet = new Packet(rf.receive()); 
@@ -59,6 +62,8 @@ public class Receiver implements Runnable {
 			//if the buffer is full or the packet is corrupt
 			if(receiverBuf.size() >= 4 ){
 				localClock.setLastEvent(10);//INSUFFICIENT_BUFFER_SPACE 	Outgoing transmission rejected due to insufficient buffer space
+				if(localClock.getDebugOn())
+					output.println("INSUFFICIENT_BUFFER_SPACE");
 				continue;
 			}
 			if(packet.checkIfCorrupt())
@@ -66,31 +71,21 @@ public class Receiver implements Runnable {
 
 			//if it was sent to everyone
 			if(packet.getDestAddr() == -1){
-				//base the sequence number of packets sending to -1 off that general address (use dest addr)
-				//so we don't base it off of the other host's address (we emailed about this Brad)
-				//if the sequence number is less than expected, just ignore this packet
-				if(packet.getSeqNum() < getExpectedSeqNum(packet.getDestAddr()))
-					continue;
-				else //update the expected sequence number to after what we received
-					recvSeqNums.put(packet.getSrcAddr(), packet.getSeqNum() + 1);
 
 				//if the packet is a beacon
-				if(packet.getFrameType() == 2){
+				if(packet.getFrameType() == 2)
 					localClock.updateClockOffset(packet);
-
-				}
 				else{
 					try{ 
-						receiverBuf.put(packet);
+						receiverBuf.put(packet);	//put up the broadcast no matter what
 					} catch(InterruptedException e){
 						System.err.println("Receiver interrupted!");
 					}
 				}
 			}
-
 			//else if it's destination is our mac address
 			else if(packet.getDestAddr() == ourMac){
-
+				
 				//if its an ack AND it has the same sequence number
 				if((packet.getFrameType() == 1) && (packet.getSeqNum() == senderBuf.peek().getSeqNum()))
 					senderBuf.peek().setAsAcked();		//tell sender that that packet was ACKed
@@ -108,7 +103,8 @@ public class Receiver implements Runnable {
 	* @param packet the packet whose sequence number it is checking
 	*/
 	private void checkSeqNum(Packet packet){
-		short expectedSeqNum = getExpectedSeqNum(packet.getSrcAddr());
+		
+		short expectedSeqNum = getExpectedSeqNum(packet.getSrcAddr()); 
 
 		//if we haven't seen it yet
 		if(expectedSeqNum == 0)
