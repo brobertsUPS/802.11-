@@ -53,47 +53,49 @@ public class Receiver implements Runnable {
 		if(receiverBuf == null){
 			localClock.setLastEvent(7);//BAD_ADDRESS 	Pointer to a buffer or address was NULL
 			if(localClock.getDebugOn())
-				output.println("BAD_ADDRESS");
+				output.println("BAD ADDRESS");
 		}
 		
 		while(true){
 			Packet packet = new Packet(rf.receive()); 
 
-			//if the buffer is full or the packet is corrupt
-			if(receiverBuf.size() >= 4 ){
-				localClock.setLastEvent(10);//INSUFFICIENT_BUFFER_SPACE 	Outgoing transmission rejected due to insufficient buffer space
-				if(localClock.getDebugOn())
-					output.println("INSUFFICIENT_BUFFER_SPACE");
-				continue;
+			//---all conditions below are mutually exclusive, if one happens, none of the others happen---//
+
+			if(packet.checkIfCorrupt()){
+				//--------ADD GENERAL ERROR HERE-------//
 			}
-			if(packet.checkIfCorrupt())
-				continue;
 
-			//if it was sent to everyone
-			if(packet.getDestAddr() == -1){
+			//if the packet is a beacon
+			else if(packet.getFrameType() == 2 && packet.getDestAddr() == -1)
+				localClock.updateClockOffset(packet);
 
-				//if the packet is a beacon
-				if(packet.getFrameType() == 2)
-					localClock.updateClockOffset(packet);
-				else{
-					try{ 
-						receiverBuf.put(packet);	//put up the broadcast no matter what
-					} catch(InterruptedException e){
-						System.err.println("Receiver interrupted!");
-					}
+			//if the buffer is full
+			else if(receiverBuf.size() >= 4 ){
+				localClock.setLastEvent(10);//INSUFFICIENT_BUFFER_SPACE 	Outgoing transmission rejected due to insufficient buffer space
+				
+				if(localClock.getDebugOn())
+					output.println("INSUFFICIENT BUFFER SPACE");
+			}
+
+			//if it was sent to everyone (bcast)
+			else if(packet.getDestAddr() == -1){
+				try{ 
+					receiverBuf.put(packet);	//put up the broadcast no matter what
+				} catch(InterruptedException e){
+					System.err.println("Receiver interrupted!");
 				}
 			}
+
 			//else if it's destination is our mac address
 			else if(packet.getDestAddr() == ourMac){
-				
 				//if its an ack AND it has the same sequence number
 				if((packet.getFrameType() == 1) && (packet.getSeqNum() == senderBuf.peek().getSeqNum()))
 					senderBuf.peek().setAsAcked();		//tell sender that that packet was ACKed
+			
 				//not an ack so recieve the data
 				else
 					checkSeqNum(packet);
-			}		
-				
+			}
 		}
 	}
 

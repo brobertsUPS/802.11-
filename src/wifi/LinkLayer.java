@@ -14,8 +14,8 @@ import java.util.*;
  * @author Brandon Roberts 
  */
 public class LinkLayer implements Dot11Interface {
-	private static final short MAX_MAC = (short)((1 << 15) - 2);
-	private static final short MAX_DATA_LENGTH = 2038; //the specified max length for data being sent
+	private static final short MAX_MAC = (short)((1 << 15) - 2); //-2 so we don't include the MAC address of all ones in this value
+	private static final short MAX_DATA_LENGTH = 2038; //the specified max number of bytes of data
 
 	private RF theRF;
 	private short ourMAC; 										//Our MAC address
@@ -96,12 +96,12 @@ public class LinkLayer implements Dot11Interface {
 		
 		output.println("LinkLayer: Sending " + len + " bytes to " + dest);
 		
-		if(senderBuf.size() == 4){	//Hit limit on buffer size
+		if(senderBuf.size() >= 4){	//Hit limit on buffer size
 			localClock.setLastEvent(10);//INSUFFICIENT_BUFFER_SPACE 	Outgoing transmission rejected due to insufficient buffer space
 			if(debugOn)
 				output.println("INSUFFICIENT_BUFFER_SPACE");
 			return 0;
-			}
+		}
 		else{
 			senderBuf.push(packet); //have to fill senderBuf with the data from packet
 			return len;
@@ -125,6 +125,7 @@ public class LinkLayer implements Dot11Interface {
 			packet = receiverBuf.take();//receive the packet
 			if(localClock.getDebugOn())
 				output.println("Received packet: " + packet.toString() + " At Time: " +  (localClock.getLocalTime()));
+			
 			return prepareForLayerAbove(t, packet);
 		} catch(InterruptedException e){
 			System.err.println("Receiver interrupted!");
@@ -197,6 +198,7 @@ public class LinkLayer implements Dot11Interface {
 		t.setBuf(packetData);
 		t.setSourceAddr(packet.getSrcAddr());
 		t.setDestAddr(ourMAC);
+
 		return packetData.length;
 	}
 	

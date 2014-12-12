@@ -140,7 +140,7 @@ public class Packet {
 	 * @return a string representation of this packet
 	 */
 	public synchronized String toString(){
-		return ("FrameType: " + frameType + " | Retry: " + retry + " | Sequence Number: " + seqNum + " | Destination Address: " + destAddr + " | Source Address: " + srcAddr + " | Data: " + data);
+		return ("FrameType: " + frameType + " | Retry: " + retry + " | Sequence Number: " + seqNum + " | Destination Address: " + destAddr + " | Source Address: " + srcAddr + " | Data: " + Arrays.toString(data));
 	}
 	
 

@@ -62,17 +62,16 @@ public class Sender implements Runnable{
 	 */
 	private void waitForFrame(){
 		if(localClock.getBeaconsOn())//only send beacons if we have them turned on
-			//checkBeacon();
+			checkToSendBeacon();
 		
 		if(!senderBuf.isEmpty()){
-			
 			currentPacket = senderBuf.peek();
 
-			if(currentPacket.getFrameType() == 1){					// if this is an ACK we want to send
-				waitForIdleChannelToACK();							// checks if channel is idle and then waits SIFS
-				rf.transmit(currentPacket.toBytes());				// transmit the ack
-				senderBuf.remove(currentPacket);					// pull the ack message off that we want to send
-			}else{													// else this is not an ACK
+			if(currentPacket.getFrameType() == 1){ // if this is an ACK we want to send
+				waitForIdleChannelToACK(); // checks if channel is idle and then waits SIFS
+				rf.transmit(currentPacket.toBytes()); // transmit the ack
+				senderBuf.remove(currentPacket); // pull the ack message off that we want to send
+			}else{ // else this is not an ACK
 				if(!rf.inUse())
 					waitDIFS();
 				else
@@ -98,15 +97,15 @@ public class Sender implements Runnable{
 		} catch (InterruptedException e) {
 			System.err.println("Failed waiting DIFS");
 		}
+
 		int backoffCount = localClock.getBackoffCount();
-		if(backoffCount != 0){								//do a backoff if we havent counted down to 0
+		if(backoffCount != 0){ //do a backoff if we havent counted down to 0
 			localClock.setBackoffCount(backoffCount-1);
 			waitSlotTime();
-		}else{												//finished backoff wait and got to 0
-			if(rf.inUse()){									//If someone popped in right before us we have to wait again
+		} else{	//finished backoff wait and got to 0
+			if(rf.inUse())	//if someone popped in right before us we have to wait again
 				waitForIdleChannel();
-			}
-			else	//no one on channel and we are clear to go
+			else //no one on channel and we are clear to go
 				transmitPacket();
 		}
 	}
@@ -186,7 +185,7 @@ public class Sender implements Runnable{
 		if(currentPacket == null){
 			localClock.setLastEvent(7);//BAD_ADDRESS 	Pointer to a buffer or address was NULL
 			if(localClock.getDebugOn())
-				output.println("BAD_ADDRESS");
+				output.println("BAD ADDRESS");
 		}
 		
 		//if it was being sent to MAC address -1 (Bcast) or was a beacon, don't wait for an ack
@@ -197,7 +196,7 @@ public class Sender implements Runnable{
 			localClock.setLastEvent(4);//TX_DELIVERED 	Last transmission was acknowledged
 			
 			if(localClock.getDebugOn())
-				output.println("TX_DELIVERED");
+				output.println("TX DELIVERED");
 			
 			senderBuf.remove(currentPacket); //since it is acked we pull it off
 			localClock.setCollisionWindow(1); //reset window size
@@ -207,7 +206,7 @@ public class Sender implements Runnable{
 			localClock.setLastEvent(5); //TX_FAILED 	Last transmission was abandoned after unsuccessful delivery attempts
 			
 			if(localClock.getDebugOn())
-				output.println("TX_FAILED");
+				output.println("TX FAILED");
 
 			senderBuf.remove(currentPacket);
 			localClock.setCollisionWindow(1);
@@ -261,7 +260,7 @@ public class Sender implements Runnable{
 	* Checks if the beacon should be sent
 	* If it should, creates a beacon packet and puts on the senderBuffer
 	*/
-	private void checkBeacon(){
+	private void checkToSendBeacon(){
 		byte[] beaconTime = localClock.calcBeaconTime();
 
 		//beacontime will be null if the beacon interval has not passed

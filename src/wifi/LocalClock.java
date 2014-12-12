@@ -71,6 +71,8 @@ public class LocalClock{
 		if(beaconsOn && rf.clock() - lastBeaconTime >= beaconInterval){
 			lastBeaconTime = rf.clock();//update lastbeacontime for use here as well
 
+			System.out.println(lastBeaconTime);
+
 			//make a data buffer with the current clock time
 			long beaconTime = lastBeaconTime + clockOffset;
 			byte[] beaconTimeArray = new byte[8]; //8 bytes for the beacon time
@@ -99,6 +101,7 @@ public class LocalClock{
 			otherHostTime += timeArray[i];
 		}
 
+		System.out.println(rf.clock());
 		//get the difference in the clocks
 		long clockDifference = otherHostTime - (clockOffset + rf.clock());
 		if(clockDifference > 0)//if the other host is ahead of us in time, advance our time to match
