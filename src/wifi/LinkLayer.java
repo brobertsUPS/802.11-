@@ -14,6 +14,9 @@ import java.util.*;
  * @author Brandon Roberts 
  */
 public class LinkLayer implements Dot11Interface {
+	private static final short MAX_MAC = (short)((1 << 15) - 2);
+	private static final short MAX_DATA_LENGTH = 2038;
+
 	private RF theRF;
 	private short ourMAC; 										//Our MAC address
 	private PrintWriter output; 								//The output stream we'll write to
@@ -36,13 +39,13 @@ public class LinkLayer implements Dot11Interface {
 		
 		output.println("LinkLayer: Constructor ran.");
 
-		if(ourMAC > 65534 || ourMAC < -1)//largest viable mac is 65534
-			localClock.setLastEvent(8);//BAD_MAC_ADDRESS 	Illegal MAC address was specified
+		if(ourMAC > MAX_MAC || ourMAC < -1) //largest viable mac is 65534
+			localClock.setLastEvent(8); //BAD_MAC_ADDRESS 	Illegal MAC address was specified
 		
 		this.ourMAC = ourMAC;
 		this.output = output;
 
-		theRF = new RF(null, null);
+		theRF = new RF(output, null);
 		
 		senderBuf = new ArrayDeque<Packet>(4); 			//limited buffer size of 4
 		receiverBuf = new ArrayBlockingQueue<Packet>(4); 
@@ -71,13 +74,13 @@ public class LinkLayer implements Dot11Interface {
 	 * of bytes to send. See docs for full description.
 	 */
 	public int send(short dest, byte[] data, int len) {
-		
 		Packet packet = new Packet((short)0, getNextSeqNum(dest, sendSeqNums), dest, ourMAC, data);
+		
 		if(localClock.getDebugOn()){
 			output.println("Attepmting to send packet: " + packet.toString() + " At Time: " + (localClock.getLocalTime()));
 			output.println("Slot Count: " + localClock.getBackoffCount() + " Collision Window: " + localClock.getCollisionWindow());
 		}
-		if(dest > 65534  || data == null || len >2038)
+		if(dest > MAX_MAC  || data == null || len > MAX_DATA_LENGTH)
 			localClock.setLastEvent(9);//ILLEGAL_ARGUMENT 	One or more arguments are invalid
 		
 		output.println("LinkLayer: Sending " + len + " bytes to " + dest);
