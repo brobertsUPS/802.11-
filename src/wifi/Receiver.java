@@ -50,8 +50,9 @@ public class Receiver implements Runnable {
 	 * Begins waiting for the rf layer to receive and puts it in the receiverBuf
 	 */
 	public void run() {
+		
 		if(receiverBuf == null){
-			localClock.setLastEvent(7);//BAD_ADDRESS 	Pointer to a buffer or address was NULL
+			localClock.setLastEvent(LocalClock.BAD_ADDRESS);//BAD_ADDRESS 	Pointer to a buffer or address was NULL
 			if(localClock.getDebugOn())
 				output.println("BAD_ADDRESS");
 		}
@@ -61,7 +62,7 @@ public class Receiver implements Runnable {
 
 			//if the buffer is full or the packet is corrupt
 			if(receiverBuf.size() >= 4 ){
-				localClock.setLastEvent(10);//INSUFFICIENT_BUFFER_SPACE 	Outgoing transmission rejected due to insufficient buffer space
+				localClock.setLastEvent(LocalClock.INSUFFICIENT_BUFFER_SPACE);//INSUFFICIENT_BUFFER_SPACE 	Outgoing transmission rejected due to insufficient buffer space
 				if(localClock.getDebugOn())
 					output.println("INSUFFICIENT_BUFFER_SPACE");
 				continue;
