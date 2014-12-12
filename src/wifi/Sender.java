@@ -1,5 +1,6 @@
 package wifi;
 
+import java.io.PrintWriter;
 import java.util.*;
 
 import rf.RF;
@@ -17,6 +18,8 @@ public class Sender implements Runnable{
 	private ArrayDeque<Packet> senderBuf;
 
 	private Packet currentPacket;	//keep track of the current packet that is being sent
+	
+	private PrintWriter output;
 
 	
 	/**
@@ -26,13 +29,15 @@ public class Sender implements Runnable{
 	 * @param ourMACAddr the MAC address
 	 * @param theLocalClock the local clock object
 	 */
-	public Sender(RF theRF, ArrayDeque<Packet> senderBuffer, short ourMACAddr, LocalClock theLocalClock){
+	public Sender(RF theRF, ArrayDeque<Packet> senderBuffer, short ourMACAddr, LocalClock theLocalClock, PrintWriter theOutput){
 		rf = theRF;
 		senderBuf = senderBuffer;
 		ourMAC = ourMACAddr;
 		localClock = theLocalClock;
-
+		
 		currentPacket = null;
+		
+		output = theOutput;
 	}
 	
 
@@ -56,7 +61,8 @@ public class Sender implements Runnable{
 	 * State that waits for a frame
 	 */
 	private void waitForFrame(){
-		//checkBeacon();
+		if(localClock.getBeaconsOn())//only send beacons if we have them turned on
+			//checkBeacon();
 		
 		if(!senderBuf.isEmpty()){
 			
@@ -177,8 +183,11 @@ public class Sender implements Runnable{
 	 * State that waits for an ACK
 	 */
 	private void waitForACK(){
-		if(currentPacket == null)
+		if(currentPacket == null){
 			localClock.setLastEvent(7);//BAD_ADDRESS 	Pointer to a buffer or address was NULL
+			if(localClock.getDebugOn())
+				output.println("BAD_ADDRESS");
+		}
 		
 		//if it was being sent to MAC address -1 (Bcast) or was a beacon, don't wait for an ack
 		if(currentPacket.getDestAddr() == -1 || currentPacket.getFrameType() == 2)
@@ -186,13 +195,20 @@ public class Sender implements Runnable{
 			
 		else if(currentPacket.isAcked()){
 			localClock.setLastEvent(4);//TX_DELIVERED 	Last transmission was acknowledged
+			
+			if(localClock.getDebugOn())
+				output.println("TX_DELIVERED");
+			
 			senderBuf.remove(currentPacket); //since it is acked we pull it off
 			localClock.setCollisionWindow(1); //reset window size
 		}
 
 		else if(currentPacket.getNumRetryAttempts()  >= RF.dot11RetryLimit){  //hit retry limit and it breaks so that it will pull it off the buffer
 			localClock.setLastEvent(5); //TX_FAILED 	Last transmission was abandoned after unsuccessful delivery attempts
-			System.out.println("Hit retry LIMIT");
+			
+			if(localClock.getDebugOn())
+				output.println("TX_FAILED");
+
 			senderBuf.remove(currentPacket);
 			localClock.setCollisionWindow(1);
 		}
@@ -260,13 +276,19 @@ public class Sender implements Runnable{
 		System.out.println("SENDER got to timeout and now trying to retransmit");
 
 		localClock.setCollisionWindow(localClock.getCollisionWindow()*2);//windowSize *= 2; 	//double window size
+		
+		if(localClock.getDebugOn())
+			output.println("Collision window changed to: " + localClock.getCollisionWindow());
 
 		//get the backoff count based on if the slot selection is fixed
 		if(localClock.getSlotSelectionFixed()) 
 			localClock.setBackoffCount(localClock.getCollisionWindow());//backoffCount = windowSize;
 		else
 			localClock.setBackoffCount((int)(Math.random()* (localClock.getCollisionWindow()+1)));//backoffCount = (int) (Math.random()*(windowSize + 1));
-
+		
+		if(localClock.getDebugOn())	//print if debug is on
+			output.println("BackoffCount changed to: "+ localClock.getBeaconInterval());
+		
 		currentPacket.retry(); //increment the retry attempt counter in the packet
 
 		//try to resend

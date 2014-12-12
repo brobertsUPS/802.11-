@@ -15,7 +15,7 @@ import java.util.*;
  */
 public class LinkLayer implements Dot11Interface {
 	private static final short MAX_MAC = (short)((1 << 15) - 2);
-	private static final short MAX_DATA_LENGTH = 2038;
+	private static final short MAX_DATA_LENGTH = 2038; //the specified max length for data being sent
 
 	private RF theRF;
 	private short ourMAC; 										//Our MAC address
@@ -36,37 +36,39 @@ public class LinkLayer implements Dot11Interface {
 	 * @param output Output stream associated with GUI
 	 */
 	public LinkLayer(short ourMAC, PrintWriter output){
-		
-		output.println("LinkLayer: Constructor ran.");
-
-		if(ourMAC > MAX_MAC || ourMAC < -1) //largest viable mac is 65534
-			localClock.setLastEvent(8); //BAD_MAC_ADDRESS 	Illegal MAC address was specified
-		
 		this.ourMAC = ourMAC;
 		this.output = output;
 
 		theRF = new RF(output, null);
-		
+		if(theRF == null)
+			localClock.setLastEvent(3); //RF_INIT_FAILED 	Attempt to initialize RF layer failed
+
+
+		localClock = new LocalClock(theRF);
+
+		if(ourMAC > MAX_MAC || ourMAC < -1)
+			localClock.setLastEvent(8);//BAD_MAC_ADDRESS 	Illegal MAC address was specified
+
+
 		senderBuf = new ArrayDeque<Packet>(4); 			//limited buffer size of 4
 		receiverBuf = new ArrayBlockingQueue<Packet>(4); 
 		
 		if(senderBuf.size() <0 || receiverBuf.size() <0)
 			localClock.setLastEvent(6);//BAD_BUF_SIZE 	Buffer size was negative
-			
+
+
 		sendSeqNums = new HashMap<Short, Integer>();
 
-		localClock = new LocalClock(theRF);
-		
 		localClock.setLastEvent(1); //SUCCESS 	Initial value if 802_init is successful
-		if(theRF == null)
-			localClock.setLastEvent(3); //RF_INIT_FAILED 	Attempt to initialize RF layer failed
 		
-		Thread sender = new Thread(new Sender(theRF, senderBuf, ourMAC, localClock));
+		Thread sender = new Thread(new Sender(theRF, senderBuf, ourMAC, localClock, output));
 		Thread receiver = new Thread(new Receiver(theRF, senderBuf, receiverBuf, ourMAC, localClock, output));
 		
 		sender.start();
 		receiver.start();
 		
+		output.println("Link Layer initialized with MAC address " + ourMAC +
+				"\nSend command 0 to see a list of supported commands");
 	}
 	
 	/**
@@ -74,19 +76,30 @@ public class LinkLayer implements Dot11Interface {
 	 * of bytes to send. See docs for full description.
 	 */
 	public int send(short dest, byte[] data, int len) {
+		boolean debugOn = localClock.getDebugOn();
+			
 		Packet packet = new Packet((short)0, getNextSeqNum(dest, sendSeqNums), dest, ourMAC, data);
-		
-		if(localClock.getDebugOn()){
+		if(debugOn){
 			output.println("Attepmting to send packet: " + packet.toString() + " At Time: " + (localClock.getLocalTime()));
 			output.println("Slot Count: " + localClock.getBackoffCount() + " Collision Window: " + localClock.getCollisionWindow());
 		}
-		if(dest > MAX_MAC  || data == null || len > MAX_DATA_LENGTH)
+		
+		if(dest > MAX_MAC)
+			localClock.setLastEvent(8);//ILLEGAL_MAC_ADDRESS
+		
+		if(data == null || len > MAX_DATA_LENGTH){
 			localClock.setLastEvent(9);//ILLEGAL_ARGUMENT 	One or more arguments are invalid
+
+			if(debugOn)
+				output.println("ILLEGAL_ARGUMENT");
+		}
 		
 		output.println("LinkLayer: Sending " + len + " bytes to " + dest);
 		
 		if(senderBuf.size() == 4){	//Hit limit on buffer size
 			localClock.setLastEvent(10);//INSUFFICIENT_BUFFER_SPACE 	Outgoing transmission rejected due to insufficient buffer space
+			if(debugOn)
+				output.println("INSUFFICIENT_BUFFER_SPACE");
 			return 0;
 			}
 		else{
@@ -100,17 +113,18 @@ public class LinkLayer implements Dot11Interface {
 	 * the Transmission object. See docs for full description.
 	 */
 	public int recv(Transmission t) {
-		output.println("LinkLayer: Pretending to block on recv()");
 
-		if(t == null)
+		if(t == null){
 			localClock.setLastEvent(9);// ILLEGAL_ARGUMENT 	One or more arguments are invalid
+			if(localClock.getDebugOn())
+				output.println("ILLEGAL_ARGUMENT");
+		}
 		
 		Packet packet;
 		try{
 			packet = receiverBuf.take();//receive the packet
-			if(localClock.getDebugOn()){
+			if(localClock.getDebugOn())
 				output.println("Received packet: " + packet.toString() + " At Time: " +  (localClock.getLocalTime()));
-			}
 			return prepareForLayerAbove(t, packet);
 		} catch(InterruptedException e){
 			System.err.println("Receiver interrupted!");
@@ -136,14 +150,9 @@ public class LinkLayer implements Dot11Interface {
 		if(cmd == 0){
 			output.println("-------------- Commands and Settings -----------------");
 			output.println("Cmd #0: Display command options and current settings");
-			output.println("Cmd #1: Set debug level.  Currently at 0 \n\tUse -1 for full debug output, 0 for no output");
-			output.println("Cmd #2: Set slot selection method.  Currently random \n\tUse 0 for random slot selection, any other value to use maxCW");
-			output.println("Cmd #3: Set beacon interval.  Currently at 3 seconds \n\tValue specifies seconds between the start of beacons; -1 disables");
-			//output.println("Cmd #4: Set beep interval.  Currently at 1 secondsValue is interpreted as seconds between beeps; -1 disables");
-
-			//print slot choice and beacon interval
-			output.println("The current slot choice is fixed: " + localClock.getSlotSelectionFixed());
-			output.println("The current beacon interval: " + localClock.getBeaconInterval());
+			output.println("Cmd #1: Set debug level.  Debug is on: " + localClock.getDebugOn() + " \n\tUse -1 for full debug output, 0 for no output");
+			output.println("Cmd #2: Set slot selection method.  Currently fixed: " +localClock.getSlotSelectionFixed()+ ", with window of "+ localClock.getCollisionWindow()+ "\n\tUse 0 for random slot selection, any other value to use maxCW");
+			output.println("Cmd #3: Set beacon interval.  Currently at "+ localClock.getBeaconInterval()/1000 + " seconds \n\tValue specifies seconds between the start of beacons; -1 disables");
 
 			return 0;
 		}
@@ -155,16 +164,20 @@ public class LinkLayer implements Dot11Interface {
 				output.println("Diagnostic turned on");	
 				output.println("The current slot choice is fixed: " + localClock.getSlotSelectionFixed() + 
 								"\n\t The current beacon interval: " + localClock.getBeaconInterval() + 
-								"\n\t  Beacons are turned on: " + localClock.getBeaconsOn());
+								"\n\t Beacons are turned on: " + localClock.getBeaconsOn() + 
+								"\n\t Debug is on: " + localClock.getDebugOn() +
+								"\n\t Current BackoffCount: " + localClock.getBackoffCount() + 
+								"\n\t Collsion window: " + localClock.getCollisionWindow() + 
+								"\n\t Last event status: " + localClock.getLastEvent());
 			}
 		}
 		else if(cmd == 2){	//Set slot selection to fixed or random
 			localClock.setSlotSelectionFixed(val);
-			//random slot window
-			if(val == 0)
-				output.println("Random slot window");
+			
+			if(val == 0)//random slot window
+				output.println("Random slot window with collision window: " + localClock.getCollisionWindow());
 			else
-				output.println("Fixed slot window");
+				output.println("Fixed slot window with collision window: " + localClock.getCollisionWindow());
 		}
 		else if(cmd == 3){	//turn beacon off or set it to a specified number of seconds
 			localClock.setBeaconInterval(val);
@@ -184,7 +197,6 @@ public class LinkLayer implements Dot11Interface {
 		t.setBuf(packetData);
 		t.setSourceAddr(packet.getSrcAddr());
 		t.setDestAddr(ourMAC);
-
 		return packetData.length;
 	}
 	
