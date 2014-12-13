@@ -44,13 +44,9 @@ public class LinkLayer implements Dot11Interface {
 		
 		if(theRF == null)
 			localClock.setLastEvent(LocalClock.RF_INIT_FAILED); //	Attempt to initialize RF layer failed
-
-
 		
-
 		if(ourMAC > MAX_MAC || ourMAC < -1)
 			localClock.setLastEvent(LocalClock.BAD_MAC_ADDRESS);// 	Illegal MAC address was specified
-
 
 		senderBuf = new ArrayDeque<Packet>(4); 			//limited buffer size of 4
 		receiverBuf = new ArrayBlockingQueue<Packet>(4); 
@@ -86,15 +82,25 @@ public class LinkLayer implements Dot11Interface {
 			output.println("Slot Count: " + localClock.getBackoffCount() + " Collision Window: " + localClock.getCollisionWindow());
 		}
 		
-		if(dest > MAX_MAC)
+		if(dest > MAX_MAC || dest < -1){
 			localClock.setLastEvent(LocalClock.BAD_MAC_ADDRESS);//ILLEGAL_MAC_ADDRESS
-		
-		if(data == null || len > MAX_DATA_LENGTH){
-			localClock.setLastEvent(LocalClock.ILLEGAL_ARGUMENT);//ILLEGAL_ARGUMENT 	One or more arguments are invalid
-
 			if(debugOn)
-				output.println("ILLEGAL_ARGUMENT");
+				output.println("ILLEGAL MAC ADDRESS");
 		}
+		
+		if(len > MAX_DATA_LENGTH || len < 0){
+			localClock.setLastEvent(LocalClock.ILLEGAL_ARGUMENT);//ILLEGAL_ARGUMENT 	One or more arguments are invalid
+			if(debugOn)
+				output.println("ILLEGAL ARGUMENT");
+		}
+		
+		if(data == null){	//BAD_ADDRESS 	Pointer to a buffer or address was NULL
+			localClock.setLastEvent(LocalClock.BAD_ADDRESS);
+			if(debugOn)
+				output.println("BAD ADDRESS");
+		}
+			
+		
 		
 		output.println("LinkLayer: Sending " + len + " bytes to " + dest);
 		

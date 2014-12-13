@@ -20,6 +20,8 @@ public class Sender implements Runnable{
 	private Packet currentPacket;	//keep track of the current packet that is being sent
 	
 	private PrintWriter output;
+	
+	private long startTime;
 
 	
 	/**
@@ -251,7 +253,6 @@ public class Sender implements Runnable{
 	*/
 	private void transmitPacket(){
 		rf.transmit(currentPacket.toBytes());
-
 		localClock.startACKTimer();
 		waitForACK();
 	}

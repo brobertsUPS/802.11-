@@ -58,12 +58,15 @@ public class Receiver implements Runnable {
 		}
 		
 		while(true){
-			Packet packet = new Packet(rf.receive()); 
-
+			byte[] temp = rf.receive();
+			Packet packet = new Packet(temp); 
+			
 			//---all conditions below are mutually exclusive, if one happens, none of the others happen---//
 
 			if(packet.checkIfCorrupt()){
-				//--------ADD GENERAL ERROR HERE-------//
+				localClock.setLastEvent(LocalClock.UNSPECIFIED_ERROR);//UNSPECIFIED_ERROR 	General error code
+				if(localClock.getDebugOn())
+					output.println("UNSPECIFIED_ERROR");
 			}
 
 			//if the packet is a beacon
@@ -92,7 +95,6 @@ public class Receiver implements Runnable {
 				//if its an ack AND it has the same sequence number
 				if((packet.getFrameType() == 1) && (packet.getSeqNum() == senderBuf.peek().getSeqNum()))
 					senderBuf.peek().setAsAcked();		//tell sender that that packet was ACKed
-			
 				//not an ack so recieve the data
 				else
 					checkSeqNum(packet);
@@ -132,7 +134,8 @@ public class Receiver implements Runnable {
 		//if the recieved packet has a higher sequence number than what we expect
 		else if(expectedSeqNum < packet.getSeqNum()){ 
 			output.println("Detected a gap in the sequence numbers on incoming data packets from host: " + packet.getSrcAddr());
-			outOfOrderTable.get(packet.getSrcAddr()).add(packet.getSeqNum() - expectedSeqNum - 1, packet); //adding the packet to the spot in the arraylist corresponding to the distance from the expected sequence number -1 to maintain starting at 0
+			ArrayList<Packet> missingPackets = outOfOrderTable.get(packet.getSrcAddr());//get a pointer to make the next line readable
+			missingPackets.add(packet.getSeqNum() - expectedSeqNum - 1, packet); //adding the packet to the spot in the arraylist corresponding to the distance from the expected sequence number -1 to maintain starting at 0
 		}
 	}
 
