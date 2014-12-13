@@ -59,7 +59,7 @@ public class Receiver implements Runnable {
 		
 		while(true){
 			Packet packet = new Packet(rf.receive()); 
-
+			
 			//---all conditions below are mutually exclusive, if one happens, none of the others happen---//
 
 			if(packet.checkIfCorrupt()){

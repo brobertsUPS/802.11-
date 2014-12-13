@@ -250,5 +250,4 @@ public class Packet {
 	public synchronized void setSeqNum(short sequenceNum){
 		seqNum = sequenceNum;
 	}
-
 }
