@@ -48,7 +48,7 @@ public class LinkLayer implements Dot11Interface {
 		sendSeqNums = new HashMap<Short, Integer>();
 		
 		//--initialize and start sender and receiver threads--//
-		Thread sender = new Thread(new Sender(theRF, senderBuf, ourMAC, localClock, output));
+		Thread sender = new Thread(new Sender(theRF, senderBuf, ourMAC, localClock, output, sendSeqNums));
 		Thread receiver = new Thread(new Receiver(theRF, senderBuf, receiverBuf, ourMAC, localClock, output));
 		sender.start();
 		receiver.start();
