@@ -69,8 +69,8 @@ public class Receiver implements Runnable {
 					output.println("UNSPECIFIED_ERROR");
 			}
 
-			//if the packet is a beacon
-			else if(packet.getFrameType() == 2 && packet.getDestAddr() == -1)
+			//if the packet is a beacon (and we have beacons turned on)
+			else if(localClock.getBeaconsOn() && packet.getFrameType() == 2 && packet.getDestAddr() == -1)
 				localClock.updateClockOffset(packet);
 
 			//if the buffer is full

@@ -54,12 +54,11 @@ public class LinkLayer implements Dot11Interface {
 		if(senderBuf.size() <0 || receiverBuf.size() <0)
 			localClock.setLastEvent(LocalClock.BAD_BUF_SIZE);//BAD_BUF_SIZE 	Buffer size was negative
 
-
 		sendSeqNums = new HashMap<Short, Integer>();
 
 		localClock.setLastEvent(LocalClock.SUCCESS); //SUCCESS 	Initial value if 802_init is successful
 		
-		Thread sender = new Thread(new Sender(theRF, senderBuf, ourMAC, localClock, output));
+		Thread sender = new Thread(new Sender(theRF, senderBuf, ourMAC, localClock, output, sendSeqNums));
 		Thread receiver = new Thread(new Receiver(theRF, senderBuf, receiverBuf, ourMAC, localClock, output));
 		
 		sender.start();
@@ -99,8 +98,6 @@ public class LinkLayer implements Dot11Interface {
 			if(debugOn)
 				output.println("BAD ADDRESS");
 		}
-			
-		
 		
 		output.println("LinkLayer: Sending " + len + " bytes to " + dest);
 		
@@ -226,11 +223,4 @@ public class LinkLayer implements Dot11Interface {
 		return seqNums.get(address).shortValue();
 	}
 	
-	private void printSettings(){
-		output.println("");
-	}
-	
-	public int getMAC(){
-		return ourMAC;
-	}
 }
