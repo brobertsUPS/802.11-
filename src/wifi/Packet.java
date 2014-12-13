@@ -61,7 +61,7 @@ public class Packet {
 		frameType = (short) ((recvPacket[0] & 0xF0) >> 4);		//get out the FrameType and the Retry bit in one number
 		retry = (short) (frameType % 2);						//if it is odd, then the retry bit (that was the least significant bit in this 4 bit number) was 1
 		frameType >>= 1;										//shift over to get rid of retry bit
-		
+
 		//sequence number
 		seqNum = (short) (((recvPacket[0] & 0xF) << 8 ) + (recvPacket[1] & 0xFFF)); //pull out sequence number//pull out sequence number ************Getting wrong value right now
 

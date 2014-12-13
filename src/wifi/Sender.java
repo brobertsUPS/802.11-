@@ -16,7 +16,7 @@ public class Sender implements Runnable{
 	private LocalClock localClock;
 	private short ourMAC;
 	
-	private HashMap<Short, Integer> sendSeqNums;//Key of the destAddress, and value of the next seqNum we are sending
+	private HashMap<Short, Integer> sendSeqNums; //Key of the destAddress, and value of the next seqNum we are sending
 
 	private ArrayDeque<Packet> senderBuf;
 
@@ -212,15 +212,14 @@ public class Sender implements Runnable{
 	 * State that waits for an ACK
 	 */
 	private void waitForACK(){
-
 		if(currentPacket == null){
-			localClock.setLastEvent(LocalClock.BAD_ADDRESS);//BAD_ADDRESS 	Pointer to a buffer or address was NULL
+			localClock.setLastEvent(LocalClock.UNSPECIFIED_ERROR);
 			if(localClock.getDebugOn())
-				output.println("BAD ADDRESS");
+				output.println("Packet was not created properly");
 		}
 
 		//if it was being sent to MAC address -1 (Bcast) or was a beacon, don't wait for an ack
-		if(currentPacket.getDestAddr() == -1 || currentPacket.getFrameType() == 2)
+		else if(currentPacket.getDestAddr() == -1 || currentPacket.getFrameType() == 2)
 			senderBuf.remove(currentPacket);
 
 		else if(currentPacket.isAcked()){
@@ -235,7 +234,6 @@ public class Sender implements Runnable{
 
 		else if(currentPacket.getNumRetryAttempts()  >= RF.dot11RetryLimit){  //hit retry limit and it breaks so that it will pull it off the buffer
 			localClock.setLastEvent(LocalClock.TX_FAILED); //TX_FAILED 	Last transmission was abandoned after unsuccessful delivery attempts
-
 			if(localClock.getDebugOn())
 				output.println("TX FAILED: Setting dead host expected sequence number to 0");
 			
@@ -306,12 +304,14 @@ public class Sender implements Runnable{
 	 * Deals with the occassion where we timed out while waiting for an ack
 	 */
 	private void timedOut(){
-		System.out.println("SENDER got to timeout and now trying to retransmit");
-
+		output.println("SENDER got to timeout and now trying to retransmit");
+		
 		localClock.setCollisionWindow(localClock.getCollisionWindow()*2);//windowSize *= 2; double window size
 
-		if(localClock.getDebugOn())
+		if(localClock.getDebugOn()){
+			output.println("SENDER got to timeout and now trying to retransmit");
 			output.println("Collision window changed to: " + localClock.getCollisionWindow());
+		}
 
 																		//get the backoff count based on if the slot selection is fixed
 		if(localClock.getSlotSelectionFixed()) 
@@ -320,7 +320,7 @@ public class Sender implements Runnable{
 			localClock.setBackoffCount((int)(Math.random()* (localClock.getCollisionWindow()+1)));//backoffCount = (int) (Math.random()*(windowSize + 1));
 
 		if(localClock.getDebugOn())										//print if debug is on
-			output.println("BackoffCount changed to: "+ localClock.getBeaconInterval());
+			output.println("BackoffCount changed to: "+ localClock.getBackoffCount());
 
 		currentPacket.retry(); 											//increment the retry attempt counter in the packet
 

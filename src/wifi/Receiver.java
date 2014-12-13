@@ -12,6 +12,8 @@ import java.util.*;
  * @author Nate Olderman
  */
 public class Receiver implements Runnable {
+	private static final int BUFFER_SIZE_LIMIT = 4; //the limit to the size of the buffer
+
 	private RF rf;
 	private short ourMac;
 	private LocalClock localClock;
@@ -82,7 +84,7 @@ public class Receiver implements Runnable {
 			}
 
 			//if the packet was sent to everyone (bcast)
-			else if(packet.getDestAddr() == -1){
+			else if(packet.getFrameType() == 0 && packet.getDestAddr() == -1){
 				try{ 
 					receiverBuf.put(packet);	//put up the broadcast no matter what
 				} catch(InterruptedException e){
@@ -92,11 +94,11 @@ public class Receiver implements Runnable {
 
 			//if the destination was our mac address
 			else if(packet.getDestAddr() == ourMac){
-				//if it's an ack AND it has the same sequence number
-				if((packet.getFrameType() == 1) && (packet.getSeqNum() == senderBuf.peek().getSeqNum()))
-					senderBuf.peek().setAsAcked();	//tell sender that that packet was ACKed
-
-				else //not an ack so recieve the data
+				if(packet.getFrameType() == 1){//if it is an ack
+					if(packet.getSeqNum() == senderBuf.peek().getSeqNum())
+						senderBuf.peek().setAsAcked();	//tell sender that that packet was ACKed
+				}
+				else if(packet.getFrameType() == 0)//else if it is normal data
 					checkSeqNum(packet);
 			}
 		}

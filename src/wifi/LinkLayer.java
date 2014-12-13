@@ -73,14 +73,8 @@ public class LinkLayer implements Dot11Interface {
 	 * @return the number of bytes sent, 0 if not sent
 	 */
 	public int send(short dest, byte[] data, int len) {
-		Packet packet = new Packet((short)0, getNextSeqNum(dest), dest, ourMAC, data);
-		
 		//--Debug and status codes--//
 		boolean debugOn = localClock.getDebugOn();
-		if(debugOn){
-			output.println("Attepmting to send packet: " + packet.toString() + " At Time: " + (localClock.getLocalTime()));
-			output.println("Slot Count: " + localClock.getBackoffCount() + " Collision Window: " + localClock.getCollisionWindow());
-		}
 		if(dest > MAX_MAC || dest < -1){
 			localClock.setLastEvent(LocalClock.BAD_MAC_ADDRESS);//ILLEGAL_MAC_ADDRESS
 			if(debugOn)
@@ -107,7 +101,15 @@ public class LinkLayer implements Dot11Interface {
 			return 0;
 		}
 
-		//--No issues detected, so sending the packet--//
+		//create the packet
+		Packet packet = new Packet((short)0, getNextSeqNum(dest), dest, ourMAC, data);
+		
+		//print out if debug is on
+		if(debugOn){
+			output.println("Attepmting to send packet: " + packet.toString() + " At Time: " + (localClock.getLocalTime()));
+			output.println("Slot Count: " + localClock.getBackoffCount() + " Collision Window: " + localClock.getCollisionWindow());
+		}
+
 		output.println("LinkLayer: Sending " + len + " bytes to " + dest);
 		
 		senderBuf.push(packet);//put the packet on the sender buffer
