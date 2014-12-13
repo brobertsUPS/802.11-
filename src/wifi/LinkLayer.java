@@ -45,9 +45,6 @@ public class LinkLayer implements Dot11Interface {
 		if(theRF == null)
 			localClock.setLastEvent(LocalClock.RF_INIT_FAILED); //	Attempt to initialize RF layer failed
 
-
-		
-
 		if(ourMAC > MAX_MAC || ourMAC < -1)
 			localClock.setLastEvent(LocalClock.BAD_MAC_ADDRESS);// 	Illegal MAC address was specified
 
@@ -100,7 +97,7 @@ public class LinkLayer implements Dot11Interface {
 		
 		if(senderBuf.size() >= 4){	//Hit limit on buffer size
 			localClock.setLastEvent(LocalClock.INSUFFICIENT_BUFFER_SPACE);//Outgoing transmission rejected due to insufficient buffer space
-			
+
 			if(debugOn)
 				output.println("INSUFFICIENT_BUFFER_SPACE");
 			return 0;
