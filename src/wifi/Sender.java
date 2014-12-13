@@ -20,6 +20,8 @@ public class Sender implements Runnable{
 	private Packet currentPacket;	//keep track of the current packet that is being sent
 	
 	private PrintWriter output;
+	
+	private long startTime;
 
 	
 	/**
@@ -45,8 +47,9 @@ public class Sender implements Runnable{
 	 * Continually loops forever waiting for a new frame then trying to send it
 	 */
 	public void run() {
-		if(senderBuf==null)
+		if(senderBuf == null)
 			localClock.setLastEvent(LocalClock.BAD_ADDRESS);//Pointer to a buffer or address was NULL
+		//no debug print here because user cannot turn on debug until after this
 		
 		while(true)
 			waitForFrame();
@@ -182,7 +185,6 @@ public class Sender implements Runnable{
 	 * State that waits for an ACK
 	 */
 	private void waitForACK(){
-
 		if(currentPacket == null){
 			localClock.setLastEvent(LocalClock.BAD_ADDRESS);//BAD_ADDRESS 	Pointer to a buffer or address was NULL
 			if(localClock.getDebugOn())
@@ -252,7 +254,6 @@ public class Sender implements Runnable{
 	*/
 	private void transmitPacket(){
 		rf.transmit(currentPacket.toBytes());
-
 		localClock.startACKTimer();
 		waitForACK();
 	}

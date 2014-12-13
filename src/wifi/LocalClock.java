@@ -59,10 +59,15 @@ public class LocalClock{
 	*/
 	public static final int INSUFFICIENT_BUFFER_SPACE = 10;
 
-
-	private static final int DIFS = RF.aSIFSTime + (2 * RF.aSlotTime);
+	
+	//these values were estimated averaging the results of:
+	//10 tests using a Macbook pro with a Intel i7 processor running at 2.3 GHz
+	//10 tests using a Gateway with a AMD A8 processor running at 1.9 GHz
+	private static final long CREATE_BEACON_OFFSET = 1425; //Average time to package a beacon and send it (in milliseconds)
+	private static final long PROCESS_BEACON_OFFSET = 0; //Averaged as .02 milliseconds which was rounded down to zero
 	private static final int ACK_TIMEOUT_VALUE = RF.aSlotTime + 2129; //after 10 tests we averaged 2129 ms
 
+	private static final int DIFS = RF.aSIFSTime + (2 * RF.aSlotTime);
 
 	private RF rf;
 	
@@ -81,7 +86,6 @@ public class LocalClock{
 	private int currentStatus; //whichever one of the above status codes happened the most recently
 
 	private boolean debugOn; //whether or not debug is turned on
-
 
 	/**
 	* Creates a new LocalClock with a given RF layer
@@ -124,7 +128,8 @@ public class LocalClock{
 			lastBeaconTime = rf.clock();//update lastbeacontime for use here as well
 
 			//make a data buffer with the current clock time
-			long beaconTime = lastBeaconTime + clockOffset;
+			long beaconTime = lastBeaconTime + clockOffset + CREATE_BEACON_OFFSET;
+			
 			byte[] beaconTimeArray = new byte[8]; //8 bytes for the beacon time
 			for(int i = beaconTimeArray.length - 1; i >= 0; i--){
 				beaconTimeArray[i] = (byte)(beaconTime & 0xFF);
@@ -141,6 +146,7 @@ public class LocalClock{
 	* @param packet the beacon packet that has the time to update to
 	*/
 	public synchronized void updateClockOffset(Packet packet){
+		
 		//get the time in a byte array from the data buf
 		byte[] timeArray = packet.getDataBuf();
 
@@ -152,7 +158,7 @@ public class LocalClock{
 		}
 
 		//get the difference in the clocks
-		long clockDifference = otherHostTime - (clockOffset + rf.clock());
+		long clockDifference = otherHostTime + PROCESS_BEACON_OFFSET - (clockOffset + rf.clock());
 		if(clockDifference > 0)//if the other host is ahead of us in time, advance our time to match
 			clockOffset += clockDifference;
 	}
@@ -171,7 +177,6 @@ public class LocalClock{
 	public synchronized boolean checkACKTimeout(){
 		return (rf.clock() - startACKWait >= ACK_TIMEOUT_VALUE);
 	}
-
 
 
 //---------------------------------------------------------------------------------------------------//
