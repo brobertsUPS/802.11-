@@ -126,6 +126,7 @@ public class LocalClock{
 		//because when these two are subtracted it would get negated anyway
 		if(beaconsOn && rf.clock() - lastBeaconTime >= beaconInterval){
 			lastBeaconTime = rf.clock();//update lastbeacontime for use here as well
+			//System.out.println(lastBeaconTime);
 
 			//make a data buffer with the current clock time
 			long beaconTime = lastBeaconTime + clockOffset + CREATE_BEACON_OFFSET;
@@ -140,25 +141,23 @@ public class LocalClock{
 		return null;//otherwise it isn't ready to send beacon
 	}
 
-
 	/**
 	* Updates the offset for the clock based on the give beacon packet's time
 	* @param packet the beacon packet that has the time to update to
 	*/
 	public synchronized void updateClockOffset(Packet packet){
-		
 		//get the time in a byte array from the data buf
 		byte[] timeArray = packet.getDataBuf();
 
 		//start out the time variable when initializing, then copy the rest of it over in the loop
-		long otherHostTime = timeArray[timeArray.length-1];
-		for(int i = timeArray.length - 2; i >= 0; i--){
+		long otherHostTime = (timeArray[0] & 0xFF);
+		for(int i = 1; i < timeArray.length; i++){
 			otherHostTime = otherHostTime << 8;
-			otherHostTime += timeArray[i];
+			otherHostTime += (timeArray[i] & 0xFF);
 		}
 
 		//get the difference in the clocks
-		long clockDifference = otherHostTime + PROCESS_BEACON_OFFSET - (clockOffset + rf.clock());
+		long clockDifference = otherHostTime + PROCESS_BEACON_OFFSET - getLocalTime();
 		if(clockDifference > 0)//if the other host is ahead of us in time, advance our time to match
 			clockOffset += clockDifference;
 	}

@@ -52,8 +52,6 @@ public class Packet {
 	 * @param the byte array received from the rf layer
 	 */
 	public Packet(byte[] recvPacket){
-		
-		
 		checksum = new CRC32();
 		corrupted = false;
 
