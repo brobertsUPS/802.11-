@@ -12,8 +12,6 @@ import java.util.*;
  * @author Nate Olderman
  */
 public class Receiver implements Runnable {
-	private static final int BUFFER_SIZE_LIMIT = 4; //the limit to the size of the buffer
-
 	private RF rf;
 	private short ourMac;
 	private LocalClock localClock;

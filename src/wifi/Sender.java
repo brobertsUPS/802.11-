@@ -11,7 +11,7 @@ import rf.RF;
  * @author Nate Olderman
  */
 public class Sender implements Runnable{
-	
+	private static final int BUFFER_SIZE_LIMIT = 4; //the limit to the size of the buffer
 	private RF rf;
 	private LocalClock localClock;
 	private short ourMAC;
@@ -66,7 +66,6 @@ public class Sender implements Runnable{
 	 * State that waits for a frame
 	 */
 	private void waitForFrame(){
-
 		if(localClock.getBeaconsOn())					//only send beacons if we have them turned on
 			checkToSendBeacon();
 
@@ -296,8 +295,12 @@ public class Sender implements Runnable{
 		byte[] beaconTime = localClock.calcBeaconTime();
 
 		//beacontime will be null if the beacon interval has not passed
-		if(beaconTime != null)
+		if(beaconTime != null && senderBuf.size() < BUFFER_SIZE_LIMIT){
+			if(senderBuf.peek().getFrameType() == 2)
+				senderBuf.pop();
+			
 			senderBuf.addFirst(new Packet((short)2, (short)0, (short)-1, ourMAC, beaconTime));
+		}
 	}
 
 	/**
