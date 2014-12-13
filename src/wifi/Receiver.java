@@ -68,8 +68,10 @@ public class Receiver implements Runnable {
 			}
 
 			//if the packet is a beacon (and we have beacons turned on)
-			else if(localClock.getBeaconsOn() && packet.getFrameType() == 2 && packet.getDestAddr() == -1)
-				localClock.updateClockOffset(packet);
+			else if(packet.getFrameType() == 2 && packet.getDestAddr() == -1){
+				if(localClock.getBeaconsOn())
+					localClock.updateClockOffset(packet);
+			}
 
 			//if the buffer is full
 			else if(receiverBuf.size() >= 4 ){

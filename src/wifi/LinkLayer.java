@@ -187,7 +187,7 @@ public class LinkLayer implements Dot11Interface {
 								"\n\t Beacons are turned on: " + localClock.getBeaconsOn() + 
 								"\n\t Debug is on: " + localClock.getDebugOn() +
 								"\n\t Current BackoffCount: " + localClock.getBackoffCount() + 
-								"\n\t Collsion window: " + localClock.getCollisionWindow() + 
+								"\n\t Collision window: " + localClock.getCollisionWindow() + 
 								"\n\t Last event status: " + localClock.getLastEvent());
 			}
 		}
