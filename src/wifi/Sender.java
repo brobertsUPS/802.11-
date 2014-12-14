@@ -12,7 +12,7 @@ import rf.RF;
  */
 public class Sender implements Runnable{
 	private static final int BUFFER_SIZE_LIMIT = 4; //the limit to the size of the buffers
-	
+
 	private RF rf;
 	private LocalClock localClock;
 	private short ourMAC;
@@ -238,6 +238,7 @@ public class Sender implements Runnable{
 				output.println("TX FAILED: Setting dead host expected sequence number to 0");
 			
 			sendSeqNums.put(currentPacket.getDestAddr(), 0); //set the next seqNum we are sending to the dead host as 0
+			//--DELETE OTHER PACKETS--//
 			senderBuf.remove(currentPacket);
 			localClock.setCollisionWindow(1);
 		}
@@ -301,8 +302,24 @@ public class Sender implements Runnable{
 			if(!senderBuf.isEmpty() && senderBuf.peek().getFrameType() == 2)
 				senderBuf.pop();
 			
-			senderBuf.addFirst(new Packet((short)2, (short)0, (short)-1, ourMAC, beaconTime));
+
+			senderBuf.addFirst(new Packet((short)2, getNextSeqNum((short)-1), (short)-1, ourMAC, beaconTime));
 		}
+	}
+
+	/**
+	* Gets the next sequence number for the given destination address
+	* @param destAddress the destination address to find the corresponding next sequence number 
+	* @return the expected sequence number
+	*/
+	private short getNextSeqNum(short destAddress){
+		//check whether or not we have sent to this address before
+		if(!sendSeqNums.containsKey(destAddress)){
+			sendSeqNums.put(destAddress, 0); //assuming it starts at zero
+			return 0;
+		}
+		else
+			return sendSeqNums.get(destAddress).shortValue(); //getting what sequence number we expect
 	}
 
 	/**
@@ -311,7 +328,7 @@ public class Sender implements Runnable{
 	private void timedOut(){
 		output.println("SENDER got to timeout and now trying to retransmit");
 		
-		localClock.setCollisionWindow(localClock.getCollisionWindow()*2);//windowSize *= 2; double window size
+		localClock.setCollisionWindow(localClock.getCollisionWindow() * 2);//windowSize *= 2; double window size
 
 		if(localClock.getDebugOn()){
 			output.println("SENDER got to timeout and now trying to retransmit");

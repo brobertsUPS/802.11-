@@ -140,11 +140,16 @@ public class Receiver implements Runnable {
 			localClock.setLastEvent(LocalClock.UNSPECIFIED_ERROR);
 			//doesn't print out error message if debug is on because we were supposed to print out the fact that a gap was detected whether or not debug was on
 			output.println("Detected a gap in the sequence numbers on incoming data packets from host: " + packet.getSrcAddr());
-			
-			Packet[] missingPackets = outOfOrderTable.get(packet.getSrcAddr());//get a pointer to make the next line readable
 
-			//add the packet to the spot in the arraylist corresponding to the distance from the expected sequence number -1 to maintain starting at 0
-			missingPackets[packet.getSeqNum() - expectedSeqNum - 1] = packet; 
+			//get how far away this is from the expected sequence number for position in array (-1 because the expected packet doesn't have a spot in array)
+			int displacement = packet.getSeqNum() - expectedSeqNum - 1;
+
+			//if we are within the bounds of what we can hold onto
+			if(displacement < BUFFER_SIZE_LIMIT * 2){
+				Packet[] missingPackets = outOfOrderTable.get(packet.getSrcAddr());//get a pointer to make the next line readable
+				//add the packet to the spot in the array
+				missingPackets[displacement] = packet; 
+			}
 		}
 	}
 
@@ -173,9 +178,9 @@ public class Receiver implements Runnable {
 
 				//advance items in the array so the first packet in the queue is at index 0
 				//doesn't leave a spot for the gap because that is what we are expecting next
-				outOfOrderTable.put(packets[i].getSrcAddr(), Arrays.copyOfRange(packets, i+1, packets.length));
+				outOfOrderTable.put(packets[i+1].getSrcAddr(), Arrays.copyOfRange(packets, i+1, packets.length));
 				
-				recvSeqNums.put(packets[i].getSrcAddr(), (short)i);//update expected seqNum
+				recvSeqNums.put(packets[i+1].getSrcAddr(), (short)i);//update expected seqNum
 				break;
 			}
 
