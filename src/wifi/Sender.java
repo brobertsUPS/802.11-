@@ -67,26 +67,18 @@ public class Sender implements Runnable{
 	 * State that waits for a frame
 	 */
 	private void waitForFrame(){
-		if(localClock.getBeaconsOn())					//only send beacons if we have them turned on
+		if(localClock.getBeaconsOn()) //only send beacons if we have them turned on
 			checkToSendBeacon();
 
 		if(!senderBuf.isEmpty()){
 			currentPacket = senderBuf.peek();
 
-			if(currentPacket.getFrameType() == 1){ 		// if this is an ACK we want to send
-				
-				waitForIdleChannelToACK(); 				// checks if channel is idle and then waits SIFS
-				rf.transmit(currentPacket.toBytes());	// transmit the ack
-				senderBuf.remove(currentPacket); 		// pull the ack message off that we want to send
-				
-			}else{ 										// else this is not an ACK
-				if(!rf.inUse())
-					waitDIFS();
-				else
-					waitForIdleChannel();
-			}
-		}
-		else{											//if the senderbuf is empty we wait for something to send
+			if(!rf.inUse())
+				waitDIFS();
+			else
+				waitForIdleChannel();
+			
+		} else{	//if the senderbuf is empty we wait for something to send
 			try{
 				Thread.sleep(10);
 			}catch(InterruptedException e){
@@ -168,43 +160,6 @@ public class Sender implements Runnable{
 			transmitPacket();
 		else												//someone got on the channel and we need to wait until they are done to resume
 			waitForIdleChannel();
-	}
-
-
-	/**
-	 * State that waits SIFS time
-	 */
-	private void waitSIFS(){
-		
-		if(localClock.getDebugOn())
-			output.println("Waiting SIFS At Time: " +  (localClock.getLocalTime()));
-		
-		try {
-			Thread.sleep(RF.aSIFSTime);
-		} catch (InterruptedException e) {
-			System.err.println("Failed waiting SIFS");
-		}
-
-		if(rf.inUse())										//if channel is in use wait for it to be idle for an ack
-			waitForIdleChannelToACK();
-	}
-
-	/**
-	 * State that waits for the the channel to be idle in order to send an ACK
-	 */
-	private void waitForIdleChannelToACK(){
-		if(localClock.getDebugOn())
-			output.println("Waiting for idle channel to ack at Time: " +  (localClock.getLocalTime()));
-		
-		while(rf.inUse()){
-			try{
-				Thread.sleep(10);
-			}catch(InterruptedException e){
-				System.err.println("Sender interrupted!");
-			}
-		}
-		
-		waitSIFS();											//Only wait SIFS when idle because we are sending an ACK
 	}
 
 	/**

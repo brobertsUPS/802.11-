@@ -137,9 +137,9 @@ public class Receiver implements Runnable {
 				System.err.println("Receiver interrupted!");
 			}
 		
-			//make an ACK and add to the front of the senderBuf
-			senderBuf.addFirst(new Packet((short)1, packet.getSeqNum(), packet.getSrcAddr(), packet.getDestAddr(), new byte[1])); 
-			
+			//send ACK
+			transmitACK(packet);
+
 			//checks to see if there are other packets that had higher sequence numbers that should be pushed to layer above
 			checkOutOfOrderTable(packet, outOfOrderTable.get(packet.getSrcAddr()));
 		}
@@ -162,23 +162,8 @@ public class Receiver implements Runnable {
 		}
 
 		//otherwise it was for something we already got and the ACK got lost, so we have to resend ACK
-		else{
-			//--check the senderBuf if we were about to send an ACK for this--//
-			//copy over the senderBuf so it can be looped through
-			Packet[] senderQueue = new Packet[BUFFER_SIZE_LIMIT];
-			senderBuf.toArray(senderQueue);
-
-			boolean hadAnACK = false;
-			for(int i = 0; i < senderQueue.length && senderQueue[i] != null; i++){
-				//if it is an ACK for the same packet
-				if(senderQueue[i].getFrameType() == 1 && senderQueue[i].getSeqNum() == packet.getSeqNum() && senderQueue[i].getDestAddr() == packet.getSrcAddr())
-					hadAnACK = true;
-			}
-
-			//make an ACK and add to the front of the senderBuf
-			if(!hadAnACK)
-				senderBuf.addFirst(new Packet((short)1, packet.getSeqNum(), packet.getSrcAddr(), packet.getDestAddr(), new byte[1])); 
-		}
+		else
+			transmitACK(packet);
 	}
 
 	/**
@@ -253,5 +238,54 @@ public class Receiver implements Runnable {
 		
 		//update expected seqNum to the current packet's sequence number + 1 (to update to the next expected) and then + i (to update how many packets were taken from waiting)
 		updateSeqNum(currentPacket.getSrcAddr(), (short) (currentPacket.getSeqNum() + i));
+	}
+
+
+	//----------------------------------------------------------------------------------------------------------//
+	//---------------------------------------- Sending an ACK --------------------------------------------------//
+	//----------------------------------------------------------------------------------------------------------//
+	
+
+	private void transmitACK(Packet oldPacket){
+		Packet ackPacket = new Packet((short)1, oldPacket.getSeqNum(), oldPacket.getSrcAddr(), oldPacket.getDestAddr(), new byte[1]); 
+
+		waitForIdleChannelToACK(); 	// checks if channel is idle and then waits SIFS
+		rf.transmit(ackPacket.toBytes());	// transmit the ack
+	}
+
+	/**
+	 * Waits for the the channel to be idle in order to send an ACK
+	 */
+	private void waitForIdleChannelToACK(){
+		if(localClock.getDebugOn())
+			output.println("Waiting for idle channel to ACK at Time: " +  (localClock.getLocalTime()));
+		
+		while(rf.inUse()){
+			try{
+				Thread.sleep(10);
+			}catch(InterruptedException e){
+				System.err.println("Sender interrupted!");
+			}
+		}
+		
+		waitSIFS(); //Only wait SIFS when idle because we are sending an ACK
+	}
+
+	/**
+	 * Waits SIFS time
+	 */
+	private void waitSIFS(){
+		
+		if(localClock.getDebugOn())
+			output.println("Waiting SIFS At Time: " +  (localClock.getLocalTime()));
+		
+		try {
+			Thread.sleep(RF.aSIFSTime);
+		} catch (InterruptedException e) {
+			System.err.println("Failed waiting SIFS");
+		}
+
+		if(rf.inUse())										//if channel is in use wait for it to be idle for an ack
+			waitForIdleChannelToACK();
 	}
 }
