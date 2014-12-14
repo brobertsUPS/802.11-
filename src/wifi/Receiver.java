@@ -21,7 +21,7 @@ public class Receiver implements Runnable {
 	private LocalClock localClock;
 	private PrintWriter output;
 
-	private ArrayDeque<Packet> senderBuf;
+	private ConcurrentLinkedDeque<Packet> senderBuf;
 	private ArrayBlockingQueue<Packet> receiverBuf;
 	
 	private HashMap<Short, Short> recvSeqNums; //expected seqNum for stuff we get from other hosts
@@ -37,7 +37,7 @@ public class Receiver implements Runnable {
 	 * @param theLocalClock the local clock object
 	 * @param outputWriter the output to write to
 	 */
-	public Receiver(RF theRF, ArrayDeque<Packet> senderBuffer, ArrayBlockingQueue<Packet> receiverBuffer, short theMac, LocalClock theLocalClock, PrintWriter outputWriter){
+	public Receiver(RF theRF, ConcurrentLinkedDeque<Packet> senderBuffer, ArrayBlockingQueue<Packet> receiverBuffer, short theMac, LocalClock theLocalClock, PrintWriter outputWriter){
 		rf = theRF;
 		senderBuf = senderBuffer;
 		receiverBuf = receiverBuffer;
@@ -100,12 +100,13 @@ public class Receiver implements Runnable {
 
 			//if the destination was our mac address
 			else if(packet.getDestAddr() == ourMac){
-				if(packet.getFrameType() == 1){//if it is an ack
+				if(packet.getFrameType() == 1 && !senderBuf.isEmpty() && senderBuf.peek().getFrameType() == 0){//if it is an ACK and we expect an ACK
 					if(!senderBuf.isEmpty()){
 						System.out.println(senderBuf.peek().getSeqNum() + " ~ " + packet.getSeqNum());
 					}
 					
-					if(!senderBuf.isEmpty() && packet.getSeqNum() == senderBuf.peek().getSeqNum()){
+					//if it is an ACK from the host we are expecting and the sequence number is what we are expecting
+					while(packet.getSrcAddr() == senderBuf.peek().getDestAddr() && packet.getSeqNum() == senderBuf.peek().getSeqNum()){
 						System.out.println("TREATED LIKE AN ACK");
 						senderBuf.peek().setAsAcked();	//tell sender that that packet was ACKed
 					}

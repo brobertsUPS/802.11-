@@ -253,14 +253,12 @@ public class LocalClock{
 //---------------------------------------------------------------------------------------------------//
 
 	/*
-	 * Turns the beacons on or off
+	 * Turns the beacons on
 	 */
-	public synchronized void setBeaconsOn(int val){
-		if(val == -1)
-			beaconsOn = false;
-		else
+	public synchronized void setBeaconsOn(){
 			beaconsOn = true;
 	}
+
 	/**
 	* Set whether or not the slot selection is fixed
 	* @param slotCommand the command should be 0 for random slot selection or anything else for fixed
@@ -280,7 +278,7 @@ public class LocalClock{
 		if(theBeaconInterval == -1)
 			beaconsOn = false;
 		else
-			beaconInterval = theBeaconInterval;
+			beaconInterval = theBeaconInterval * 1000;
 	}
 	
 	/**

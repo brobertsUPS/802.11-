@@ -23,7 +23,7 @@ public class LinkLayer implements Dot11Interface {
 	private short ourMAC; 										//Our MAC address
 	private PrintWriter output; 								//The output stream we'll write to
 
-	private ArrayDeque<Packet> senderBuf; 						//the buffer for sending packets
+	private ConcurrentLinkedDeque<Packet> senderBuf; 			//the buffer for sending packets
 	private ArrayBlockingQueue<Packet> receiverBuf; 			//the buffer for receiving packets
 	
 	private HashMap<Short, Integer> sendSeqNums;				//seqNums for what we send out. key is destinationAddr, value is seqNum
@@ -41,7 +41,7 @@ public class LinkLayer implements Dot11Interface {
 
 		theRF = new RF(output, null);
 		localClock = new LocalClock(theRF);
-		senderBuf = new ArrayDeque<Packet>(BUFFER_SIZE_LIMIT);
+		senderBuf = new ConcurrentLinkedDeque<Packet>();
 		receiverBuf = new ArrayBlockingQueue<Packet>(BUFFER_SIZE_LIMIT);
 		sendSeqNums = new HashMap<Short, Integer>();
 		
@@ -184,7 +184,7 @@ public class LinkLayer implements Dot11Interface {
 			}else{
 				output.println("Diagnostic turned on");	
 				output.println("The current slot choice is fixed: " + localClock.getSlotSelectionFixed() + 
-								"\n\t The current beacon interval: " + localClock.getBeaconInterval() + 
+								"\n\t The current beacon interval in seconds: " + localClock.getBeaconInterval()/1000 + 
 								"\n\t Beacons are turned on: " + localClock.getBeaconsOn() + 
 								"\n\t Debug is on: " + localClock.getDebugOn() +
 								"\n\t Current BackoffCount: " + localClock.getBackoffCount() + 
@@ -201,11 +201,11 @@ public class LinkLayer implements Dot11Interface {
 				output.println("Set as fixed slot window with collision window: " + localClock.getCollisionWindow());
 		}
 		else if(cmd == 3){	//turn beacon off or set it to a specified number of seconds
-			localClock.setBeaconInterval(val);
-			localClock.setBeaconsOn(val);
+			localClock.setBeaconInterval(val);//will turn it off if -1
 			if(val == -1)
 				output.println("Beacons have been stopped");
 			else{
+				localClock.setBeaconsOn();
 				output.println("Beacons have been set to " + val + " seconds");
 			}
 		}

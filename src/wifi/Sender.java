@@ -2,6 +2,7 @@ package wifi;
 
 import java.io.PrintWriter;
 import java.util.*;
+import java.util.concurrent.*;
 
 import rf.RF;
 
@@ -20,7 +21,7 @@ public class Sender implements Runnable{
 	
 	private HashMap<Short, Integer> sendSeqNums; //Key of the destAddress, and value of the next seqNum we are sending
 
-	private ArrayDeque<Packet> senderBuf;
+	private ConcurrentLinkedDeque<Packet> senderBuf;
 
 	private Packet currentPacket;	//keep track of the current packet that is being sent
 	private byte[] packetAsBytes;
@@ -36,7 +37,7 @@ public class Sender implements Runnable{
 	 * @param theLocalClock the local clock object
 	 * @param theOutput the printwriter to write to 
 	 */
-	public Sender(RF theRF, ArrayDeque<Packet> senderBuffer, short ourMACAddr, LocalClock theLocalClock, PrintWriter theOutput, HashMap<Short, Integer> seqNums){
+	public Sender(RF theRF, ConcurrentLinkedDeque<Packet> senderBuffer, short ourMACAddr, LocalClock theLocalClock, PrintWriter theOutput, HashMap<Short, Integer> seqNums){
 
 		rf = theRF;
 		sendSeqNums = seqNums;
@@ -159,10 +160,10 @@ public class Sender implements Runnable{
 			System.err.println("Failed waiting DIFS");
 		}
 
-		if(!rf.inUse())										//still not in use and we are good to send
+		if(rf.inUse()) //someone got on the channel and we need to wait until they are done to resume
+			waitForIdleChannel();								
+		else //still not in use and we are good to send
 			transmitPacket();
-		else												//someone got on the channel and we need to wait until they are done to resume
-			waitForIdleChannel();
 	}
 
 	/**
@@ -192,7 +193,7 @@ public class Sender implements Runnable{
 
 		else if(currentPacket.getNumRetryAttempts()  >= RF.dot11RetryLimit){  //hit retry limit and it breaks so that it will pull it off the buffer
 			localClock.setLastEvent(LocalClock.TX_FAILED); //TX_FAILED 	Last transmission was abandoned after unsuccessful delivery attempts
-			//if(localClock.getDebugOn())
+			if(localClock.getDebugOn())
 				output.println("TX FAILED: Setting dead host expected sequence number to 0");
 			
 			//remove this packet
@@ -257,7 +258,8 @@ public class Sender implements Runnable{
 	private void transmitPacket(){
 		rf.transmit(packetAsBytes);
 		localClock.startACKTimer();
-		waitForACK();
+
+		while(!waitForACK());
 	}
 
 	/**
