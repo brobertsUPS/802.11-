@@ -233,7 +233,7 @@ public class Sender implements Runnable{
 
 		else if(currentPacket.getNumRetryAttempts()  >= RF.dot11RetryLimit){  //hit retry limit and it breaks so that it will pull it off the buffer
 			localClock.setLastEvent(LocalClock.TX_FAILED); //TX_FAILED 	Last transmission was abandoned after unsuccessful delivery attempts
-			if(localClock.getDebugOn())
+			//if(localClock.getDebugOn())
 				output.println("TX FAILED: Setting dead host expected sequence number to 0");
 			
 			//remove this packet

@@ -98,7 +98,7 @@ public class Receiver implements Runnable {
 			//if the destination was our mac address
 			else if(packet.getDestAddr() == ourMac){
 				if(packet.getFrameType() == 1){//if it is an ack
-					if(packet.getSeqNum() == senderBuf.peek().getSeqNum())
+					if(!senderBuf.isEmpty() && packet.getSeqNum() == senderBuf.peek().getSeqNum())
 						senderBuf.peek().setAsAcked();	//tell sender that that packet was ACKed
 				}
 				else if(packet.getFrameType() == 0)//else if it is normal data
