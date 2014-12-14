@@ -247,10 +247,10 @@ public class Receiver implements Runnable {
 	
 
 	private void transmitACK(Packet oldPacket){
-		Packet ackPacket = new Packet((short)1, oldPacket.getSeqNum(), oldPacket.getSrcAddr(), oldPacket.getDestAddr(), new byte[1]); 
+		byte[] toSend = (new Packet((short)1, oldPacket.getSeqNum(), oldPacket.getSrcAddr(), oldPacket.getDestAddr(), new byte[1])).toBytes(); 
 
 		waitForIdleChannelToACK(); 	// checks if channel is idle and then waits SIFS
-		rf.transmit(ackPacket.toBytes());	// transmit the ack
+		rf.transmit(toSend);	// transmit the ack
 	}
 
 	/**
@@ -258,7 +258,7 @@ public class Receiver implements Runnable {
 	 */
 	private void waitForIdleChannelToACK(){
 		if(localClock.getDebugOn())
-			output.println("Waiting for idle channel to ACK at Time: " +  (localClock.getLocalTime()));
+			output.println("Receiver waiting for idle channel to ACK at Time: " +  (localClock.getLocalTime()));
 		
 		while(rf.inUse()){
 			try{
@@ -275,14 +275,13 @@ public class Receiver implements Runnable {
 	 * Waits SIFS time
 	 */
 	private void waitSIFS(){
-		
 		if(localClock.getDebugOn())
-			output.println("Waiting SIFS At Time: " +  (localClock.getLocalTime()));
+			output.println("Receiver waiting SIFS At Time: " +  (localClock.getLocalTime()));
 		
 		try {
 			Thread.sleep(RF.aSIFSTime);
 		} catch (InterruptedException e) {
-			System.err.println("Failed waiting SIFS");
+			System.err.println("Receiver failed waiting SIFS");
 		}
 
 		if(rf.inUse())										//if channel is in use wait for it to be idle for an ack

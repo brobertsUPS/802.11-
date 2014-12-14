@@ -22,6 +22,7 @@ public class Sender implements Runnable{
 	private ArrayDeque<Packet> senderBuf;
 
 	private Packet currentPacket;	//keep track of the current packet that is being sent
+	private byte[] packetAsBytes;
 
 	private PrintWriter output;		//output given by linkLayer
 
@@ -59,9 +60,9 @@ public class Sender implements Runnable{
 			waitForFrame();
 	}
 
-	//---------------------------------------------------------------------------------------------------------//
-	//---------------------------------------- Sender States --------------------------------------------------//
-	//---------------------------------------------------------------------------------------------------------//
+//---------------------------------------------------------------------------------------------------------//
+//---------------------------------------- Sender States --------------------------------------------------//
+//---------------------------------------------------------------------------------------------------------//
 
 	/**
 	 * State that waits for a frame
@@ -72,6 +73,7 @@ public class Sender implements Runnable{
 
 		if(!senderBuf.isEmpty()){
 			currentPacket = senderBuf.peek();
+			packetAsBytes = currentPacket.toBytes();
 
 			if(!rf.inUse())
 				waitDIFS();
@@ -243,15 +245,15 @@ public class Sender implements Runnable{
 	}
 
 
-	//----------------------------------------------------------------------------------------------------------//
-	//---------------------------------------- Helper Methods --------------------------------------------------//
-	//----------------------------------------------------------------------------------------------------------//
+//----------------------------------------------------------------------------------------------------------//
+//---------------------------------------- Helper Methods --------------------------------------------------//
+//----------------------------------------------------------------------------------------------------------//
 
 	/**
 	 * Transmits the packet and waits for an ACK
 	 */
 	private void transmitPacket(){
-		rf.transmit(currentPacket.toBytes());
+		rf.transmit(packetAsBytes);
 		localClock.startACKTimer();
 		waitForACK();
 	}
@@ -308,10 +310,11 @@ public class Sender implements Runnable{
 		else
 			localClock.setBackoffCount((int)(Math.random()* (localClock.getCollisionWindow()+1)));//backoffCount = (int) (Math.random()*(windowSize + 1));
 
-		if(localClock.getDebugOn())										//print if debug is on
+		if(localClock.getDebugOn()) //print if debug is on
 			output.println("BackoffCount changed to: "+ localClock.getBackoffCount());
 
-		currentPacket.retry(); 											//increment the retry attempt counter in the packet
+		currentPacket.retry(); //increment the retry attempt counter in the packet
+		packetAsBytes = currentPacket.toBytes();//recreate byte version of packet
 
 		//try to resend
 		if(rf.inUse())
