@@ -28,8 +28,6 @@ public class LinkLayer implements Dot11Interface {
 	
 	private HashMap<Short, Integer> sendSeqNums;				//seqNums for what we send out. key is destinationAddr, value is seqNum
 	private LocalClock localClock;
-
-	private int statusCode;
 	
 	/**
 	 * Constructor takes a MAC address and the PrintWriter to which our output will
@@ -100,9 +98,10 @@ public class LinkLayer implements Dot11Interface {
 				output.println("INSUFFICIENT_BUFFER_SPACE");
 			return 0;
 		}
-
+		short temp = getNextSeqNum(dest);
+		System.out.println("--" + temp);
 		//create the packet
-		Packet packet = new Packet((short)0, getNextSeqNum(dest), dest, ourMAC, data);
+		Packet packet = new Packet((short)0, temp, dest, ourMAC, data);
 		
 		//print out if debug is on
 		if(debugOn){

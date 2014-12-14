@@ -65,7 +65,7 @@ public class LocalClock{
 	//10 tests using a Gateway with a AMD A8 processor running at 1.9 GHz
 	private static final long CREATE_BEACON_OFFSET = 1425; //Average time to package a beacon and send it (in milliseconds)
 	private static final long PROCESS_BEACON_OFFSET = 0; //Averaged as .02 milliseconds which was rounded down to zero
-	private static final int ACK_TIMEOUT_VALUE = RF.aSlotTime + 2129; //after 10 tests we averaged 2129 ms
+	private static final int ACK_TIMEOUT_VALUE = RF.aSlotTime + 4129; //after 10 tests we averaged 2129 ms
 
 	private static final int DIFS = RF.aSIFSTime + (2 * RF.aSlotTime);
 

@@ -61,6 +61,9 @@ public class Receiver implements Runnable {
 		
 		while(true){
 			Packet packet = new Packet(rf.receive());
+			if(packet.getFrameType() ==1){
+				System.out.println(packet.getDestAddr() + " | " + packet.getSeqNum());
+			}
 			
 			//---all conditions below are mutually exclusive, if one happens, none of the others happen---//
 			//if packet is corrupt
