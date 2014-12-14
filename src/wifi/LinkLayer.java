@@ -202,10 +202,12 @@ public class LinkLayer implements Dot11Interface {
 		}
 		else if(cmd == 3){	//turn beacon off or set it to a specified number of seconds
 			localClock.setBeaconInterval(val);
+			localClock.setBeaconsOn(val);
 			if(val == -1)
 				output.println("Beacons have been stopped");
-			else
+			else{
 				output.println("Beacons have been set to " + val + " seconds");
+			}
 		}
 		return 0;
 	}
