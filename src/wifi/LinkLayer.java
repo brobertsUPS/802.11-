@@ -95,7 +95,7 @@ public class LinkLayer implements Dot11Interface {
 			localClock.setLastEvent(LocalClock.INSUFFICIENT_BUFFER_SPACE);//Outgoing transmission rejected due to insufficient buffer space
 
 			if(debugOn)
-				output.println("INSUFFICIENT_BUFFER_SPACE");
+				output.println("INSUFFICIENT BUFFER SPACE");
 			return 0;
 		}
 		short temp = getNextSeqNum(dest);

@@ -14,6 +14,7 @@ import java.util.*;
 public class Receiver implements Runnable {
 	private static final int BUFFER_SIZE_LIMIT = 4; //the limit to the size of the buffers
 	private static final int SEQ_NUM_LIMIT = (1 << 12); //the sequence numbers should never hit 2^12
+	private static final int SLEEP_WAIT = 5; //the amount of time to sleep when it is waiting for something
 
 	private RF rf;
 	private short ourMac;
@@ -52,7 +53,6 @@ public class Receiver implements Runnable {
 	 * Begins waiting for the rf layer to receive and puts it in the receiverBuf
 	 */
 	public void run() {
-		
 		if(receiverBuf == null){
 			localClock.setLastEvent(LocalClock.BAD_ADDRESS);//BAD_ADDRESS 	Pointer to a buffer or address was NULL
 			if(localClock.getDebugOn())
@@ -61,7 +61,7 @@ public class Receiver implements Runnable {
 		
 		while(true){
 			Packet packet = new Packet(rf.receive());
-			if(packet.getFrameType() ==1){
+			if(packet.getFrameType() == 1){
 				System.out.println(packet.getDestAddr() + " | " + packet.getSeqNum());
 			}
 			
@@ -262,7 +262,7 @@ public class Receiver implements Runnable {
 		
 		while(rf.inUse()){
 			try{
-				Thread.sleep(10);
+				Thread.sleep(SLEEP_WAIT);
 			}catch(InterruptedException e){
 				System.err.println("Sender interrupted!");
 			}

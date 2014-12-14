@@ -12,6 +12,7 @@ import rf.RF;
  */
 public class Sender implements Runnable{
 	private static final int BUFFER_SIZE_LIMIT = 4; //the limit to the size of the buffers
+	private static final int SLEEP_WAIT = 5; //the amount of time to sleep when it is waiting for something
 
 	private RF rf;
 	private LocalClock localClock;
@@ -82,7 +83,7 @@ public class Sender implements Runnable{
 			
 		} else{	//if the senderbuf is empty we wait for something to send
 			try{
-				Thread.sleep(10);
+				Thread.sleep(SLEEP_WAIT);
 			}catch(InterruptedException e){
 				System.err.println("Sender interrupted!");
 			}
@@ -166,8 +167,9 @@ public class Sender implements Runnable{
 
 	/**
 	 * State that waits for an ACK
+	 * @return true when done waiting (may not have gotten ACK)
 	 */
-	private void waitForACK(){
+	private boolean waitForACK(){
 		if(currentPacket == null){
 			localClock.setLastEvent(LocalClock.UNSPECIFIED_ERROR);
 			if(localClock.getDebugOn())
@@ -217,13 +219,13 @@ public class Sender implements Runnable{
 
 		else{ //else not timed out yet
 			try {
-				Thread.sleep(10);
+				Thread.sleep(SLEEP_WAIT);
 			} catch (InterruptedException e) {
 				System.err.println("Failed waiting for ACK");
 			}
-			waitForACK();
+			return false;
 		}
-
+		return true;
 	}
 
 
@@ -235,7 +237,7 @@ public class Sender implements Runnable{
 			output.println("Waiting for idle channel at Time: " +  (localClock.getLocalTime()));
 		while(rf.inUse()){
 			try{
-				Thread.sleep(10);
+				Thread.sleep(SLEEP_WAIT);
 			}catch(InterruptedException e){
 				System.err.println("Sender interrupted!");
 			}
@@ -295,12 +297,10 @@ public class Sender implements Runnable{
 	 * Deals with the occassion where we timed out while waiting for an ack
 	 */
 	private void timedOut(){
-		output.println("SENDER got to timeout and now trying to retransmit");
-		
 		localClock.setCollisionWindow(localClock.getCollisionWindow() * 2);//windowSize *= 2; double window size
 
 		if(localClock.getDebugOn()){
-			output.println("SENDER got to timeout and now trying to retransmit");
+			output.println("SENDER got to timeout and now trying to retransmit sequence number: " + currentPacket.getSeqNum());
 			output.println("Collision window changed to: " + localClock.getCollisionWindow());
 		}
 
