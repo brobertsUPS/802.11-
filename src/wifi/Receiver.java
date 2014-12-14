@@ -101,8 +101,14 @@ public class Receiver implements Runnable {
 			//if the destination was our mac address
 			else if(packet.getDestAddr() == ourMac){
 				if(packet.getFrameType() == 1){//if it is an ack
-					if(!senderBuf.isEmpty() && packet.getSeqNum() == senderBuf.peek().getSeqNum())
+					if(!senderBuf.isEmpty()){
+						System.out.println(senderBuf.peek().getSeqNum() + " ~ " + packet.getSeqNum());
+					}
+					
+					if(!senderBuf.isEmpty() && packet.getSeqNum() == senderBuf.peek().getSeqNum()){
+						System.out.println("TREATED LIKE AN ACK");
 						senderBuf.peek().setAsAcked();	//tell sender that that packet was ACKed
+					}
 				}
 				else if(packet.getFrameType() == 0)//else if it is normal data
 					checkSeqNum(packet);
@@ -142,7 +148,7 @@ public class Receiver implements Runnable {
 		else if(expectedSeqNum < packet.getSeqNum()){ 
 			localClock.setLastEvent(LocalClock.UNSPECIFIED_ERROR);
 			//doesn't print out error message if debug is on because we were supposed to print out the fact that a gap was detected whether or not debug was on
-			output.println("Detected a gap in the sequence numbers on incoming data packets from host: " + packet.getSrcAddr());
+			output.println("Detected a gap, expected: " + expectedSeqNum + " got: " + packet.getSeqNum() + " from: " + packet.getSrcAddr());
 
 			//get how far away this is from the expected sequence number for position in array (-1 because the expected packet doesn't have a spot in array)
 			int displacement = packet.getSeqNum() - expectedSeqNum - 1;

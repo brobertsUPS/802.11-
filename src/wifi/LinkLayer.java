@@ -111,7 +111,7 @@ public class LinkLayer implements Dot11Interface {
 
 		output.println("LinkLayer: Sending " + len + " bytes to " + dest);
 		
-		senderBuf.push(packet);//put the packet on the sender buffer
+		senderBuf.addLast(packet);//put the packet on the sender buffer
 		return len;
 	}
 	
