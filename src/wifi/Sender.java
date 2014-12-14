@@ -249,7 +249,7 @@ public class Sender implements Runnable{
 			//go through the senderBuf and remove any packets that were going to be sent to this host
 			Packet[] senderQueue = new Packet[BUFFER_SIZE_LIMIT];
 			senderBuf.toArray(senderQueue);
-			for(int i = 0; i < senderQueue.length || senderQueue[i] == null; i++){
+			for(int i = 0; i < senderQueue.length && senderQueue[i] != null; i++){
 				if(senderQueue[i].getDestAddr() == currentPacket.getDestAddr())
 					senderBuf.remove(senderQueue[i]);
 			}			
