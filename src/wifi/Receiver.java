@@ -160,7 +160,7 @@ public class Receiver implements Runnable {
 			senderBuf.toArray(senderQueue);
 
 			boolean hadAnACK = false;
-			for(int i = 0; i < senderQueue.length; i++){
+			for(int i = 0; i < senderQueue.length ||  senderQueue[i] == null; i++){
 				//if it is an ACK for the same packet
 				if(senderQueue[i].getFrameType() == 1 && senderQueue[i].getSeqNum() == packet.getSeqNum() && senderQueue[i].getDestAddr() == packet.getSrcAddr())
 					hadAnACK = true;
