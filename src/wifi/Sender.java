@@ -156,7 +156,7 @@ public class Sender implements Runnable{
 	 */
 	private void waitDIFS(){
 		if(localClock.getDebugOn())
-			output.println("Waiting DIFS at Time: " +  (localClock.getLocalTime()));
+			output.println("Waiting DIFS at Time: " + (localClock.getLocalTime()));
 		
 		try {
 			Thread.sleep(localClock.roundedUpDIFS());
@@ -214,7 +214,7 @@ public class Sender implements Runnable{
 		if(currentPacket == null){
 			localClock.setLastEvent(LocalClock.UNSPECIFIED_ERROR);
 			if(localClock.getDebugOn())
-				output.println("Packet was not created properly");
+				output.println("Packet was not created properly to send");
 		}
 
 		//if it was being sent to MAC address -1 (Bcast) or was a beacon, don't wait for an ack

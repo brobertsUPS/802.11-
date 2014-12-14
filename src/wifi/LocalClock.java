@@ -61,11 +61,12 @@ public class LocalClock{
 
 	
 	//these values were estimated averaging the results of:
-	//10 tests using a Macbook pro with a Intel i7 processor running at 2.3 GHz
-	//10 tests using a Gateway with a AMD A8 processor running at 1.9 GHz
+	//10 tests using a Macbook pro with a Intel i7 processor running at 2.3 GHz (sending to the Gateway)
+	//10 tests using a Gateway with a AMD A8 processor running at 1.9 GHz (sending to the Mac)
+	//5 tests using the MAC (as the sender) and one of the lab machines (advance computing lab) (as receiver)
 	private static final long CREATE_BEACON_OFFSET = 1425; //Average time to package a beacon and send it in milliseconds
 	private static final long PROCESS_BEACON_OFFSET = 0; //Averaged as .02 milliseconds which was rounded down to zero
-	private static final int ACK_TIMEOUT_VALUE = RF.aSlotTime + 4129; //after 10 tests we averaged 2129 ms
+	private static final int ACK_TIMEOUT_VALUE = RF.aSlotTime + 3629; //after 15 tests we averaged 3629 ms
 
 	private static final int DIFS = RF.aSIFSTime + (2 * RF.aSlotTime);
 

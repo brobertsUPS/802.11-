@@ -244,9 +244,12 @@ public class Receiver implements Runnable {
 			}
 		}
 
+		
 		//advance items in the array so the first packet in the queue is at index 0
 		//doesn't leave a spot for the gap because that is what we are expecting next
-		outOfOrderTable.put(currentPacket.getSrcAddr(), Arrays.copyOfRange(packets, i+1, packets.length));
+		if(packets.length > 0)
+			outOfOrderTable.put(currentPacket.getSrcAddr(), Arrays.copyOfRange(packets, i+1, packets.length));
+		
 		
 		//update expected seqNum to the current packet's sequence number + 1 (to update to the next expected) and then + i (to update how many packets were taken from waiting)
 		updateSeqNum(currentPacket.getSrcAddr(), (short) (currentPacket.getSeqNum() + i));

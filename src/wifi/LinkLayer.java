@@ -105,7 +105,7 @@ public class LinkLayer implements Dot11Interface {
 		
 		//print out if debug is on
 		if(debugOn){
-			output.println("Attepmting to send packet: " + packet.toString() + " At Time: " + (localClock.getLocalTime()));
+			output.println("Attempting to send packet: " + packet.toString() + " At Time: " + (localClock.getLocalTime()));
 			output.println("Slot Count: " + localClock.getBackoffCount() + " Collision Window: " + localClock.getCollisionWindow());
 		}
 
