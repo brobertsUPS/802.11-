@@ -66,7 +66,7 @@ public class LocalClock{
 	//5 tests using the MAC (as the sender) and one of the lab machines (advance computing lab) (as receiver)
 	private static final long CREATE_BEACON_OFFSET = 1425; //Average time to package a beacon and send it in milliseconds
 	private static final long PROCESS_BEACON_OFFSET = 0; //Averaged as .02 milliseconds which was rounded down to zero
-	private static final int ACK_TIMEOUT_VALUE = RF.aSlotTime + 4629; //after 15 tests we averaged 3629 ms
+	private static final int ACK_TIMEOUT_VALUE = RF.aSlotTime + 4629; //after 15 tests we averaged 4629 ms
 
 	private static final int DIFS = RF.aSIFSTime + (2 * RF.aSlotTime);
 

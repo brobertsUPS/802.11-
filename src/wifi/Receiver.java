@@ -106,7 +106,7 @@ public class Receiver implements Runnable {
 					}
 					
 					//if it is an ACK from the host we are expecting and the sequence number is what we are expecting
-					while(packet.getSrcAddr() == senderBuf.peek().getDestAddr() && packet.getSeqNum() == senderBuf.peek().getSeqNum()){
+					if(packet.getSrcAddr() == senderBuf.peek().getDestAddr() && packet.getSeqNum() == senderBuf.peek().getSeqNum()){
 						System.out.println("TREATED LIKE AN ACK");
 						senderBuf.peek().setAsAcked();	//tell sender that that packet was ACKed
 					}
