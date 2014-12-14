@@ -11,7 +11,8 @@ import rf.RF;
  * @author Nate Olderman
  */
 public class Sender implements Runnable{
-	private static final int BUFFER_SIZE_LIMIT = 4; //the limit to the size of the buffer
+	private static final int BUFFER_SIZE_LIMIT = 4; //the limit to the size of the buffers
+	
 	private RF rf;
 	private LocalClock localClock;
 	private short ourMAC;
@@ -294,9 +295,10 @@ public class Sender implements Runnable{
 	private void checkToSendBeacon(){
 		byte[] beaconTime = localClock.calcBeaconTime();
 
-		//beacontime will be null if the beacon interval has not passed
+		//beacontime will be null if the beacon interval has not passed and don't put it in the queue if the que is full
 		if(beaconTime != null && senderBuf.size() < BUFFER_SIZE_LIMIT){
-			if(senderBuf.peek().getFrameType() == 2)
+			//if there is something in the queue, and the first thing is a beacon, just replace that beacon
+			if(!senderBuf.isEmpty() && senderBuf.peek().getFrameType() == 2)
 				senderBuf.pop();
 			
 			senderBuf.addFirst(new Packet((short)2, (short)0, (short)-1, ourMAC, beaconTime));
@@ -316,7 +318,7 @@ public class Sender implements Runnable{
 			output.println("Collision window changed to: " + localClock.getCollisionWindow());
 		}
 
-																		//get the backoff count based on if the slot selection is fixed
+		//get the backoff count based on if the slot selection is fixed
 		if(localClock.getSlotSelectionFixed()) 
 			localClock.setBackoffCount(localClock.getCollisionWindow());//backoffCount = windowSize;
 		else

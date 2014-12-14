@@ -12,6 +12,8 @@ import java.util.*;
  * @author Nate Olderman
  */
 public class Receiver implements Runnable {
+	private static final int BUFFER_SIZE_LIMIT = 4; //the limit to the size of the buffers
+
 	private RF rf;
 	private short ourMac;
 	private LocalClock localClock;
@@ -21,7 +23,7 @@ public class Receiver implements Runnable {
 	private ArrayBlockingQueue<Packet> receiverBuf;
 	
 	private HashMap<Short, Short> recvSeqNums; //expected seqNum for stuff we get from other hosts
-	private HashMap<Short, ArrayList<Packet>> outOfOrderTable; //packets that have a higher seqNum than we are expecting for the srcAddress
+	private HashMap<Short, Packet[]> outOfOrderTable; //packets that have a higher seqNum than we are expecting for the srcAddress
 	
 
 	/**
@@ -42,7 +44,7 @@ public class Receiver implements Runnable {
 		localClock = theLocalClock;
 
 		recvSeqNums = new HashMap<Short, Short>();
-		outOfOrderTable = new HashMap<Short, ArrayList<Packet>>();
+		outOfOrderTable = new HashMap<Short, Packet[]>();
 	}
 	
 	/**
@@ -112,7 +114,7 @@ public class Receiver implements Runnable {
 
 		//if we haven't seen this host yet
 		if(expectedSeqNum == 0)
-			outOfOrderTable.put(packet.getSrcAddr(), new ArrayList<Packet>());
+			outOfOrderTable.put(packet.getSrcAddr(), new Packet[BUFFER_SIZE_LIMIT*2]);//need double the allocated window space as can be sent at one time
 		
 		//if the sequence number is what we expect
 		if(expectedSeqNum == packet.getSeqNum()){
@@ -139,10 +141,10 @@ public class Receiver implements Runnable {
 			//doesn't print out error message if debug is on because we were supposed to print out the fact that a gap was detected whether or not debug was on
 			output.println("Detected a gap in the sequence numbers on incoming data packets from host: " + packet.getSrcAddr());
 			
-			ArrayList<Packet> missingPackets = outOfOrderTable.get(packet.getSrcAddr());//get a pointer to make the next line readable
+			Packet[] missingPackets = outOfOrderTable.get(packet.getSrcAddr());//get a pointer to make the next line readable
 
 			//add the packet to the spot in the arraylist corresponding to the distance from the expected sequence number -1 to maintain starting at 0
-			missingPackets.add(packet.getSeqNum() - expectedSeqNum - 1, packet); 
+			missingPackets[packet.getSeqNum() - expectedSeqNum - 1] = packet; 
 		}
 	}
 
@@ -165,25 +167,23 @@ public class Receiver implements Runnable {
 	* Helper method that checks if there are packets with higher seqNums waiting in the queue that should be given to the layer above
 	* @param packets the queue of packets with higher seq nums
 	*/
-	private void checkOutOfOrderTable(ArrayList<Packet> packets){
-		if(!packets.isEmpty()){
-			for(int i = 0; i < packets.size(); i++){ //go through everything in the queue
-				if(packets.get(i) == null){//if this spot is a gap
+	private void checkOutOfOrderTable(Packet[] packets){
+		for(int i = 0; i < packets.length; i++){ //go through everything in the queue
+			if(packets[i] == null){//if this spot is a gap
 
-					//advance items in the arraylist so the first packet in the queue is at index 0
-					//doesn't leave a spot for the gap because that is what we are expecting next
-					outOfOrderTable.put(packets.get(i).getSrcAddr(), new ArrayList<Packet>(packets.subList(i+1, packets.size())));
-					
-					recvSeqNums.put(packets.get(i).getSrcAddr(), (short)i);//update expected seqNum
-					break;
-				}
+				//advance items in the array so the first packet in the queue is at index 0
+				//doesn't leave a spot for the gap because that is what we are expecting next
+				outOfOrderTable.put(packets[i].getSrcAddr(), Arrays.copyOfRange(packets, i+1, packets.length));
+				
+				recvSeqNums.put(packets[i].getSrcAddr(), (short)i);//update expected seqNum
+				break;
+			}
 
-				//give it to the layer above
-				try{ 
-					receiverBuf.put(packets.get(i));
-				} catch(InterruptedException e){
-					System.err.println("Receiver interrupted!");
-				}
+			//give it to the layer above
+			try{ 
+				receiverBuf.put(packets[i]);
+			} catch(InterruptedException e){
+				System.err.println("Receiver interrupted!");
 			}
 		}
 	}
