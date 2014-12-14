@@ -193,7 +193,6 @@ public class Sender implements Runnable{
 	 * State that waits for the the channel to be idle in order to send an ACK
 	 */
 	private void waitForIdleChannelToACK(){
-		
 		if(localClock.getDebugOn())
 			output.println("Waiting for idle channel to ack at Time: " +  (localClock.getLocalTime()));
 		
@@ -237,10 +236,23 @@ public class Sender implements Runnable{
 			if(localClock.getDebugOn())
 				output.println("TX FAILED: Setting dead host expected sequence number to 0");
 			
-			sendSeqNums.put(currentPacket.getDestAddr(), 0); //set the next seqNum we are sending to the dead host as 0
-			//--DELETE OTHER PACKETS--//
+			//remove this packet
 			senderBuf.remove(currentPacket);
+
+			//set the collision window back to 1
 			localClock.setCollisionWindow(1);
+
+
+			//--reset everything we saved for this host--//
+			sendSeqNums.put(currentPacket.getDestAddr(), 0); //reset the next seqNum for this address back to 0
+			
+			//go through the senderBuf and remove any packets that were going to be sent to this host
+			Packet[] senderQueue = new Packet[BUFFER_SIZE_LIMIT];
+			senderBuf.toArray(senderQueue);
+			for(int i = 0; i < senderQueue.length; i++){
+				if(senderQueue[i].getDestAddr() == currentPacket.getDestAddr())
+					senderBuf.remove(senderQueue[i]);
+			}			
 		}
 
 		else if(localClock.checkACKTimeout()) //if it has taken longer than a ten seconds, so timeout and retransmit
