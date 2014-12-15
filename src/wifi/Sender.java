@@ -86,6 +86,7 @@ public class Sender implements Runnable{
 			try{
 				Thread.sleep(SLEEP_WAIT);
 			}catch(InterruptedException e){
+				localClock.setLastEvent(LocalClock.UNSPECIFIED_ERROR);
 				System.err.println("Sender interrupted!");
 			}
 		}
@@ -232,10 +233,12 @@ public class Sender implements Runnable{
 	private void waitForIdleChannel(){
 		if(localClock.getDebugOn())
 			output.println("Waiting for idle channel at Time: " +  (localClock.getLocalTime()));
+		
 		while(rf.inUse()){
 			try{
 				Thread.sleep(SLEEP_WAIT);
 			}catch(InterruptedException e){
+				localClock.setLastEvent(LocalClock.UNSPECIFIED_ERROR);
 				System.err.println("Sender interrupted!");
 			}
 		}
@@ -247,11 +250,11 @@ public class Sender implements Runnable{
 //----------------------------------------------------------------------------------------------------------//
 //---------------------------------------- Helper Methods --------------------------------------------------//
 //----------------------------------------------------------------------------------------------------------//
-
+	
 	/**
 	 * Transmits the packet and waits for an ACK
 	 */
-	private void transmitPacket(){
+	private void transmitPacket(){		
 		if(rf.inUse())
 			waitForIdleChannel();
 
@@ -282,12 +285,13 @@ public class Sender implements Runnable{
 	}
 
 	/**
-	* Gets the next sequence number for the given destination address
+	* Gets the next sequence number for the given destination address and updates it
 	* @param destAddress the destination address to find the corresponding next sequence number 
 	* @return the expected sequence number
 	*/
 	private short getNextSeqNum(short destAddress){
 		short nextSeqNum;
+		
 		//check whether or not we have sent to this address before
 		if(!sendSeqNums.containsKey(destAddress) || sendSeqNums.get(destAddress) >= SEQ_NUM_LIMIT){
 			nextSeqNum = 0; //set it to 0
@@ -301,7 +305,7 @@ public class Sender implements Runnable{
 	}
 
 	/**
-	 * Deals with the occassion where we timed out while waiting for an ack
+	 * Deals with the occasion where we timed out while waiting for an ACK
 	 */
 	private void timedOut(){
 		localClock.setCollisionWindow(localClock.getCollisionWindow() * 2);//windowSize *= 2; double window size

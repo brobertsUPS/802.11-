@@ -31,8 +31,8 @@ public class Receiver implements Runnable {
 	/**
 	 * Makes a new Receiver object that watches the RF layer for incoming information
 	 * @param theRF the RF layer to receive from
-	 * @param senderBuffer the queue of packets needing to be sent (use in Reciever to confirm ACK)
-	 * @param receiverBuffer the que of received packets
+	 * @param senderBuffer the queue of packets needing to be sent (use in Receiver to confirm ACK)
+	 * @param receiverBuffer the queue of received packets
 	 * @param theMac our MAC address
 	 * @param theLocalClock the local clock object
 	 * @param outputWriter the output to write to
@@ -61,14 +61,12 @@ public class Receiver implements Runnable {
 		
 		while(true){
 			Packet packet = new Packet(rf.receive());
-			if(packet.getFrameType() == 1){
-				System.out.println(packet.getDestAddr() + " | " + packet.getSeqNum());
-			}
 			
 			//---all conditions below are mutually exclusive, if one happens, none of the others happen---//
 			//if packet is corrupt
 			if(packet.checkIfCorrupt()){
 				localClock.setLastEvent(LocalClock.UNSPECIFIED_ERROR);//UNSPECIFIED_ERROR 	General error code
+				
 				if(localClock.getDebugOn())
 					output.println("CORRUPTED PACKET RECEIVED");
 			}
@@ -93,6 +91,7 @@ public class Receiver implements Runnable {
 					try{ 
 						receiverBuf.put(packet);	//put up the broadcast no matter what
 					} catch(InterruptedException e){
+						localClock.setLastEvent(LocalClock.UNSPECIFIED_ERROR);
 						System.err.println("Receiver interrupted!");
 					}
 				}
@@ -101,15 +100,10 @@ public class Receiver implements Runnable {
 			//if the destination was our mac address
 			else if(packet.getDestAddr() == ourMac){
 				if(packet.getFrameType() == 1 && !senderBuf.isEmpty() && senderBuf.peek().getFrameType() == 0){//if it is an ACK and we expect an ACK
-					if(!senderBuf.isEmpty()){
-						System.out.println(senderBuf.peek().getSeqNum() + " ~ " + packet.getSeqNum());
-					}
 					
 					//if it is an ACK from the host we are expecting and the sequence number is what we are expecting
-					if(packet.getSrcAddr() == senderBuf.peek().getDestAddr() && packet.getSeqNum() == senderBuf.peek().getSeqNum()){
-						System.out.println("TREATED LIKE AN ACK");
+					if(packet.getSrcAddr() == senderBuf.peek().getDestAddr() && packet.getSeqNum() == senderBuf.peek().getSeqNum())
 						senderBuf.peek().setAsAcked();	//tell sender that that packet was ACKed
-					}
 				}
 				else if(packet.getFrameType() == 0)//else if it is normal data
 					checkSeqNum(packet);
@@ -131,21 +125,22 @@ public class Receiver implements Runnable {
 		
 		//if the sequence number is what we expect
 		if(expectedSeqNum == packet.getSeqNum()){
-			//put it in the reciever buf to be taken by the layer above
+			//send ACK
+			transmitACK(packet);
+			
+			//put it in the receiver buf to be taken by the layer above
 			try{ 
 				receiverBuf.put(packet);
 			} catch(InterruptedException e){
+				localClock.setLastEvent(LocalClock.UNSPECIFIED_ERROR);
 				System.err.println("Receiver interrupted!");
 			}
-		
-			//send ACK
-			transmitACK(packet);
 
 			//checks to see if there are other packets that had higher sequence numbers that should be pushed to layer above
 			checkOutOfOrderTable(packet, outOfOrderTable.get(packet.getSrcAddr()));
 		}
 		
-		//if the recieved packet has a higher sequence number than what we expect
+		//if the received packet has a higher sequence number than what we expect
 		else if(expectedSeqNum < packet.getSeqNum()){ 
 			localClock.setLastEvent(LocalClock.UNSPECIFIED_ERROR);
 			//doesn't print out error message if debug is on because we were supposed to print out the fact that a gap was detected whether or not debug was on
@@ -199,7 +194,7 @@ public class Receiver implements Runnable {
 	* @return the expected sequence number
 	*/
 	private short getExpectedSeqNum(short sourceAddress){
-		//check whether or not we have recieved from this address before
+		//check whether or not we have received from this address before
 		if(!recvSeqNums.containsKey(sourceAddress)){
 			recvSeqNums.put(sourceAddress, (short) 0); //assuming it starts at zero
 			return 0;
@@ -225,6 +220,7 @@ public class Receiver implements Runnable {
 				try{ 
 					receiverBuf.put(packets[i]);
 				} catch(InterruptedException e){
+					localClock.setLastEvent(LocalClock.UNSPECIFIED_ERROR);
 					System.err.println("Receiver interrupted!");
 				}
 			}
@@ -251,7 +247,10 @@ public class Receiver implements Runnable {
 		byte[] toSend = (new Packet((short)1, oldPacket.getSeqNum(), oldPacket.getSrcAddr(), oldPacket.getDestAddr(), new byte[1])).toBytes(); 
 
 		waitForIdleChannelToACK(); 	// checks if channel is idle and then waits SIFS
-		rf.transmit(toSend);	// transmit the ack
+		rf.transmit(toSend);	// transmit the ACK
+
+		if(localClock.getDebugOn())
+			output.println("Receiver transmitted ACK of Sequence Number: " + oldPacket.getSeqNum());
 	}
 
 	/**
@@ -265,6 +264,7 @@ public class Receiver implements Runnable {
 			try{
 				Thread.sleep(SLEEP_WAIT);
 			}catch(InterruptedException e){
+				localClock.setLastEvent(LocalClock.UNSPECIFIED_ERROR);
 				System.err.println("Sender interrupted!");
 			}
 		}

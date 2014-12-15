@@ -66,7 +66,7 @@ public class LocalClock{
 	//5 tests using the MAC (as the sender) and one of the lab machines (advance computing lab) (as receiver)
 	private static final long CREATE_BEACON_OFFSET = 1425; //Average time to package a beacon and send it in milliseconds
 	private static final long PROCESS_BEACON_OFFSET = 0; //Averaged as .02 milliseconds which was rounded down to zero
-	private static final int ACK_TIMEOUT_VALUE = RF.aSlotTime + 4629; //after 15 tests we averaged 4629 ms
+	private static final int ACK_TIMEOUT_VALUE = RF.aSlotTime + 3629; //after 15 tests we averaged 3629 ms
 
 	private static final int DIFS = RF.aSIFSTime + (2 * RF.aSlotTime);
 
@@ -97,10 +97,10 @@ public class LocalClock{
 		
 		//initialize global variables
 		clockOffset = 0;
-		beaconInterval = 3000; //default should be 3 seconds
+		beaconInterval = 6000; //default set at 6 seconds
 		lastBeaconTime = 0;
 		slotSelectionFixed = false; //defaults to random slot selection
-		beaconsOn = true;
+		beaconsOn = false;
 		debugOn = false;
 		backoffCount = 0;
 		windowSize = 1;
@@ -126,8 +126,7 @@ public class LocalClock{
 		//offset isn't used here in interval calculation 
 		//because when these two are subtracted it would get negated anyway
 		if(beaconsOn && rf.clock() - lastBeaconTime >= beaconInterval){
-			lastBeaconTime = rf.clock();//update lastbeacontime for use here as well
-			//System.out.println(lastBeaconTime);
+			lastBeaconTime = rf.clock();//update lastBeaconTime for use here as well
 
 			//make a data buffer with the current clock time
 			long beaconTime = lastBeaconTime + clockOffset + CREATE_BEACON_OFFSET;
@@ -209,7 +208,7 @@ public class LocalClock{
 	
 	/**
 	 * Determines if debug is turned on
-	 * @return true if debus is on
+	 * @return true if debug is on
 	 */
 	public synchronized boolean getDebugOn(){
 		return debugOn;
@@ -224,7 +223,7 @@ public class LocalClock{
 	}
 	
 	/**
-	 * Determines what the collission window is currently at
+	 * Determines what the collision window is currently at
 	 * @return the size of the collision window
 	 */
 	public synchronized int getCollisionWindow(){
@@ -252,8 +251,8 @@ public class LocalClock{
 //---------------------------------------- Setters --------------------------------------------------//
 //---------------------------------------------------------------------------------------------------//
 
-	/*
-	 * Turns the beacons on
+	/**
+	 * It turns the beacons on (or else it gets the hose again)
 	 */
 	public synchronized void setBeaconsOn(){
 			beaconsOn = true;

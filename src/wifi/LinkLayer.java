@@ -98,10 +98,9 @@ public class LinkLayer implements Dot11Interface {
 				output.println("INSUFFICIENT BUFFER SPACE");
 			return 0;
 		}
-		short temp = getNextSeqNum(dest);
-		System.out.println("--" + temp);
+
 		//create the packet
-		Packet packet = new Packet((short)0, temp, dest, ourMAC, data);
+		Packet packet = new Packet((short)0, getNextSeqNum(dest), dest, ourMAC, data);
 		
 		//print out if debug is on
 		if(debugOn){
@@ -109,7 +108,7 @@ public class LinkLayer implements Dot11Interface {
 			output.println("Slot Count: " + localClock.getBackoffCount() + " Collision Window: " + localClock.getCollisionWindow());
 		}
 
-		output.println("LinkLayer: Sending " + len + " bytes to " + dest);
+		output.println("LinkLayer: Queueing packet of " + len + " bytes to " + dest);
 		
 		senderBuf.addLast(packet);//put the packet on the sender buffer
 		return len;
@@ -139,13 +138,11 @@ public class LinkLayer implements Dot11Interface {
 			return prepareForLayerAbove(t, packet);
 		} 
 		catch(InterruptedException e){
-			System.err.println("Receiver interrupted!");
+			localClock.setLastEvent(LocalClock.UNSPECIFIED_ERROR);//would get here if receive failed, make status an unspecified error
+			if(localClock.getDebugOn())
+				output.println("RECEIVE FAILED");
 		}
-
-		//would get here if receive failed, make status an unspecified error
-		localClock.setLastEvent(LocalClock.UNSPECIFIED_ERROR);
-		if(localClock.getDebugOn())
-			output.println("RECEIVE FAILED");
+		
 		return -1;
 	}
 	
@@ -218,7 +215,7 @@ public class LinkLayer implements Dot11Interface {
 //----------------------------------------------------------------------------------------------------------//
 	
 	/**
-	 * Pushes the packet to the layer above by transfering the data from packet to transmission
+	 * Pushes the packet to the layer above by transferring the data from packet to transmission
 	 * @param t the transmission to fill from the data in the packet
 	 * @param packet the packet whose data will be used to fill transmission
 	 * @return the length of the data

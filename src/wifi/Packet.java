@@ -54,7 +54,7 @@ public class Packet {
 	public Packet(byte[] recvPacket){
 		checksum = new CRC32();
 		corrupted = false;
-
+		
 		packet = recvPacket;
 
 		//build individual pieces of control
@@ -125,11 +125,10 @@ public class Packet {
 		
 		int checksumVal = (int)(checksum.getValue() & 0xFFFFFFFF);		//long representation of the checksum 
 
-		buffer[bufLen-4] = (byte) (checksumVal >>> 24);			//least significant byte		
+		buffer[bufLen-4] = (byte) (checksumVal >>> 24);	//least significant byte		
 		buffer[bufLen-3] = (byte) (checksumVal >>> 16);
 		buffer[bufLen-2] = (byte) (checksumVal >>> 8);
-		buffer[bufLen-1] = (byte) (checksumVal & 0xFF);			//end byte
-		
+		buffer[bufLen-1] = (byte) (checksumVal & 0xFF);	//end byte
 
 		return buffer;
 	}
