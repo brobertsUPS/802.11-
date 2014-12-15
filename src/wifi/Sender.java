@@ -13,7 +13,8 @@ import rf.RF;
  */
 public class Sender implements Runnable{
 	private static final int BUFFER_SIZE_LIMIT = 4; //the limit to the size of the buffers
-	private static final int SLEEP_WAIT = 5; //the amount of time to sleep when it is waiting for something
+	private static final int SEQ_NUM_LIMIT = (1 << 12); //the sequence numbers should never hit 2^12
+	private static final long SLEEP_WAIT = 5; //the amount of time to sleep when it is waiting for something
 
 	private RF rf;
 	private LocalClock localClock;
@@ -38,7 +39,6 @@ public class Sender implements Runnable{
 	 * @param theOutput the printwriter to write to 
 	 */
 	public Sender(RF theRF, ConcurrentLinkedDeque<Packet> senderBuffer, short ourMACAddr, LocalClock theLocalClock, PrintWriter theOutput, HashMap<Short, Integer> seqNums){
-
 		rf = theRF;
 		sendSeqNums = seqNums;
 		senderBuf = senderBuffer;
@@ -95,9 +95,8 @@ public class Sender implements Runnable{
 	 * State that first waits DIFS then checks for backoff
 	 */
 	private void backoffWaitIFS(){
-		
 		if(localClock.getDebugOn())
-			output.println("Backoff waiting DIFS At Time: " +  (localClock.getLocalTime()));
+			output.println("Waiting DIFS and Backingoff At Time: " +  localClock.getLocalTime());
 
 		try {
 			Thread.sleep(localClock.roundedUpDIFS());
@@ -105,16 +104,15 @@ public class Sender implements Runnable{
 			System.err.println("Failed waiting DIFS");
 		}
 
-		int backoffCount = localClock.getBackoffCount();
-		
-		if(backoffCount != 0){ 							//do a backoff if we havent counted down to 0
-			localClock.setBackoffCount(backoffCount-1);
-			waitSlotTime();
-		} else{											//finished backoff wait and got to 0
+		if(rf.inUse())	//if someone popped in right before us we have to wait again
+			waitForIdleChannel();
+		else{
+			int backoffCount = localClock.getBackoffCount();
 			
-			if(rf.inUse())								//if someone popped in right before us we have to wait again
-				waitForIdleChannel();
-			else 										//no one on channel and we are clear to go
+			if(backoffCount > 0){ 	//do a backoff if we havent counted down to 0
+				localClock.setBackoffCount(backoffCount-1);
+				waitSlotTime();
+			} else	//finished backoff wait and got to 0
 				transmitPacket();
 		}
 	}
@@ -124,7 +122,7 @@ public class Sender implements Runnable{
 	 */
 	private void waitSlotTime(){
 		if(localClock.getDebugOn())
-			output.println("Waiting Slot time at Time: " +  (localClock.getLocalTime()));
+			output.println("Waiting Slot time at Time: " +  localClock.getLocalTime());
 
 		try {
 			Thread.sleep(RF.aSlotTime);
@@ -137,11 +135,11 @@ public class Sender implements Runnable{
 		else{
 			int backoffCount = localClock.getBackoffCount();
 			
-			if(backoffCount > 0){							//still haven't reached the end of backoff waiting
+			if(backoffCount > 0){ //still haven't reached the end of backoff waiting
 				localClock.setBackoffCount(backoffCount -1);								
 				waitSlotTime();		
 			}
-			else											//go to the end of waiting and can transmit
+			else //if it still is idle
 				transmitPacket();
 		}
 	}
@@ -152,7 +150,7 @@ public class Sender implements Runnable{
 	 */
 	private void waitDIFS(){
 		if(localClock.getDebugOn())
-			output.println("Waiting DIFS at Time: " + (localClock.getLocalTime()));
+			output.println("Waiting DIFS at Time: " + localClock.getLocalTime());
 		
 		try {
 			Thread.sleep(localClock.roundedUpDIFS());
@@ -160,10 +158,7 @@ public class Sender implements Runnable{
 			System.err.println("Failed waiting DIFS");
 		}
 
-		if(rf.inUse()) //someone got on the channel and we need to wait until they are done to resume
-			waitForIdleChannel();								
-		else //still not in use and we are good to send
-			transmitPacket();
+		transmitPacket();
 	}
 
 	/**
@@ -194,7 +189,7 @@ public class Sender implements Runnable{
 		else if(currentPacket.getNumRetryAttempts()  >= RF.dot11RetryLimit){  //hit retry limit and it breaks so that it will pull it off the buffer
 			localClock.setLastEvent(LocalClock.TX_FAILED); //TX_FAILED 	Last transmission was abandoned after unsuccessful delivery attempts
 			if(localClock.getDebugOn())
-				output.println("TX FAILED: Setting dead host expected sequence number to 0");
+				output.println("TX FAILED: Setting dead host next sequence number to 0");
 			
 			//remove this packet
 			senderBuf.remove(currentPacket);
@@ -226,6 +221,7 @@ public class Sender implements Runnable{
 			}
 			return false;
 		}
+
 		return true;
 	}
 
@@ -256,10 +252,16 @@ public class Sender implements Runnable{
 	 * Transmits the packet and waits for an ACK
 	 */
 	private void transmitPacket(){
+		if(rf.inUse())
+			waitForIdleChannel();
+
 		rf.transmit(packetAsBytes);
 		localClock.startACKTimer();
 
-		while(!waitForACK());
+		if(localClock.getDebugOn())
+			output.println("Transmited packet!");
+
+		while(!waitForACK());//keep calling the method while it hasn't either gotten an ACK or given up
 	}
 
 	/**
@@ -275,7 +277,6 @@ public class Sender implements Runnable{
 			if(!senderBuf.isEmpty() && senderBuf.peek().getFrameType() == 2)
 				senderBuf.pop();
 			
-
 			senderBuf.addFirst(new Packet((short)2, getNextSeqNum((short)-1), (short)-1, ourMAC, beaconTime));
 		}
 	}
@@ -286,13 +287,17 @@ public class Sender implements Runnable{
 	* @return the expected sequence number
 	*/
 	private short getNextSeqNum(short destAddress){
+		short nextSeqNum;
 		//check whether or not we have sent to this address before
-		if(!sendSeqNums.containsKey(destAddress)){
-			sendSeqNums.put(destAddress, 0); //assuming it starts at zero
-			return 0;
+		if(!sendSeqNums.containsKey(destAddress) || sendSeqNums.get(destAddress) >= SEQ_NUM_LIMIT){
+			nextSeqNum = 0; //set it to 0
+			sendSeqNums.put(destAddress, 1); //update the one after this to be 0
 		}
-		else
-			return sendSeqNums.get(destAddress).shortValue(); //getting what sequence number we expect
+		else{
+			nextSeqNum = sendSeqNums.get(destAddress).shortValue();
+			sendSeqNums.put(destAddress, nextSeqNum+1);
+		}
+		return nextSeqNum;
 	}
 
 	/**

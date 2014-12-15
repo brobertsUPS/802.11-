@@ -14,7 +14,7 @@ import java.util.*;
 public class Receiver implements Runnable {
 	private static final int BUFFER_SIZE_LIMIT = 4; //the limit to the size of the buffers
 	private static final int SEQ_NUM_LIMIT = (1 << 12); //the sequence numbers should never hit 2^12
-	private static final int SLEEP_WAIT = 5; //the amount of time to sleep when it is waiting for something
+	private static final long SLEEP_WAIT = 5; //the amount of time to sleep when it is waiting for something
 
 	private RF rf;
 	private short ourMac;
@@ -242,9 +242,9 @@ public class Receiver implements Runnable {
 	}
 
 
-	//----------------------------------------------------------------------------------------------------------//
-	//---------------------------------------- Sending an ACK --------------------------------------------------//
-	//----------------------------------------------------------------------------------------------------------//
+//----------------------------------------------------------------------------------------------------------//
+//---------------------------------------- Sending an ACK --------------------------------------------------//
+//----------------------------------------------------------------------------------------------------------//
 	
 
 	private void transmitACK(Packet oldPacket){
@@ -285,7 +285,7 @@ public class Receiver implements Runnable {
 			System.err.println("Receiver failed waiting SIFS");
 		}
 
-		if(rf.inUse())										//if channel is in use wait for it to be idle for an ack
+		if(rf.inUse())	//if channel is in use wait for it to be idle for an ack
 			waitForIdleChannelToACK();
 	}
 }
